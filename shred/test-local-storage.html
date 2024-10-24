@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+<p id="storage" style="text-align: center">No storage found</p>
+
+<script>
+
+const addToStorage = () => {
+    let count = localStorage.getItem("count");
+    count = +count + +1;
+    localStorage.setItem("count", count);
+
+    document.getElementById("storage").innerHTML = "Storage: " + count;
+}
+
+if (typeof(Storage) !== "undefined") {
+    localStorage.clear();
+    window.setInterval(addToStorage, 50);
+} else {
+    document.getElementById("storage").innerHTML = "Storage unavailable";
+}
+
+</script>
+
+</body>
+</html>
