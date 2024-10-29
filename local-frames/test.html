@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+<img src="./brave-logo-sans-text.svg">
+
+<should-be-hidden>This should be hidden</should-be-hidden>
+
+<script src="./load-xml-http-request.js"></script>
+
+<script>
+
+const displaySvalInBody = () => {
+    const div = document.createElement('div');
+    div.textContent = `First party body: ${window.sval}`;
+    document.body.appendChild(div);
+}
+
+const displaySvalInLocalFrame = () => {
+    const localFrame = document.getElementById('local-iframe')
+    const div = localFrame.contentDocument.createElement('div');
+    div.textContent = `First local frame body: ${window.sval}`;
+    localFrame.contentDocument.body.appendChild(div);
+}
+
+const onload = () => {
+    const localFrame = document.createElement('iframe');
+    localFrame.id = 'local-iframe';
+    localFrame.src = 'about:blank';
+    localFrame.width = 400;
+    localFrame.height = 400;
+    document.body.appendChild(localFrame);
+
+    const localFrame1PImgElm = localFrame.contentDocument.createElement('img');
+    localFrame1PImgElm.src = './brave-logo-sans-text.svg';
+    localFrame.contentDocument.body.appendChild(localFrame1PImgElm);
+
+    const localFrameAd = localFrame.contentDocument.createElement('should-be-hidden');
+    localFrameAd.id = "local-frame-ad";
+    localFrameAd.innerText = 'This should be hidden';
+    localFrame.contentDocument.body.appendChild(localFrameAd);
+
+    const localFrameScript = localFrame.contentDocument.createElement('script');
+    localFrameScript.src = './load-xml-http-request.js';
+    localFrame.contentDocument.body.appendChild(localFrameScript);
+
+    setTimeout(displaySvalInBody, 100);
+    setTimeout(displaySvalInLocalFrame, 200);
+}
+
+window.onload = onload;
+
+</script>
+
+</body>
+</html>
