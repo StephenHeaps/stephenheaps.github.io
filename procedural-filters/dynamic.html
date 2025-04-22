@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Dynamic</title>
+</head>
+<body>
+
+<h1>heading</h1>
+<p>paragraph.</p>
+
+<script>
+const addElementToBody = () => {
+  const div = document.createElement('div');
+  document.body.appendChild(div);
+
+  const custom = document.createElement('custom');
+  custom.setAttribute('id', 'custom');
+  div.appendChild(custom);
+
+  const p = document.createElement('p');
+  p.textContent = "open in app";
+  custom.appendChild(p);
+}
+
+const onload = () => {
+  setTimeout(addElementToBody, 200);
+};
+window.onload = onload;
+</script>
+
+</body>
+</html>
