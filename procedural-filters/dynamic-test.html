@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Dynamic Test</title>
+</head>
+<body>
+
+<h1>heading</h1>
+<p>paragraph.</p>
+
+<script>
+
+const createElement = () => {
+  const shredditApp = document.createElement('shreddit-app');
+  shredditApp.setAttribute('class', 'overflow-visible pt-[var(--page-y-padding)] ');
+
+  const faceplateBottomSheet = document.createElement('faceplate-bottom-sheet');
+  faceplateBottomSheet.setAttribute('id', 'xpromo-bottom-sheet');
+  faceplateBottomSheet.setAttribute('class', 'justify-end z-[100]');
+  faceplateBottomSheet.setAttribute('aria-label', 'xpromo-bottom-sheet');
+  faceplateBottomSheet.setAttribute('actioned', '');
+  faceplateBottomSheet.setAttribute('open', 'See Reddit in...');
+  shredditApp.appendChild(faceplateBottomSheet);
+
+  const div = document.createElement('div');
+  div.setAttribute('class', 'relative w-full box-border text-center px-md pt-[12px] pb-[8px]');
+  faceplateBottomSheet.appendChild(div);
+
+  const div2 = document.createElement('div');
+  div2.setAttribute('class', 'flex justify-between box-border');
+  div.appendChild(div2);
+
+  const div3 = document.createElement('div');
+  div3.setAttribute('class', 'flex items-center');
+  div2.appendChild(div3);
+
+  const span = document.createElement('span');
+  span.setAttribute('class', 'text-16 font-bold text-neutral-content-strong ml-md');
+  span.textContent = 'View in Reddit App';
+  div3.appendChild(span);
+
+  return shredditApp;
+}
+
+const addElementToBody = () => {
+  document.body.appendChild(createElement());
+}
+
+const onload = () => {
+  setTimeout(addElementToBody, 200);
+};
+window.onload = onload;
+</script>
+
+</body>
+</html>
