@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Dynamic Add Element With Child</title>
+</head>
+<body>
+
+<h1>heading</h1>
+<p>paragraph.</p>
+
+<script>
+
+const addElementToBody = () => {
+  const rootNode = document.createElement('root-node');
+  rootNode.setAttribute('id', 'root-node-id');
+
+  const childNode = document.createElement('child-node');
+  childNode.setAttribute('id', 'child-node-id');
+  rootNode.appendChild(childNode);
+
+  const span = document.createElement('span');
+  span.setAttribute('id', 'span-id');
+  span.textContent = 'View in App';
+  childNode.appendChild(span);
+
+  document.body.appendChild(rootNode);
+}
+
+const onload = () => {
+  setTimeout(addElementToBody, 200);
+};
+window.onload = onload;
+</script>
+
+</body>
+</html>
