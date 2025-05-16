@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Dynamic Test</title>
+</head>
+<body>
+
+<h1>heading</h1>
+<p>paragraph.</p>
+
+<script>
+
+const addElementToBody = () => {
+  const shredditApp = document.createElement('shreddit-app');
+  shredditApp.setAttribute('id', 'shreddit-app-id');
+
+  const faceplateBottomSheet = document.createElement('faceplate-bottom-sheet');
+  faceplateBottomSheet.setAttribute('id', 'xpromo-bottom-sheet');
+  shredditApp.appendChild(faceplateBottomSheet);
+
+  const span = document.createElement('span');
+  span.setAttribute('id', 'span-id');
+  span.textContent = 'View in Reddit App';
+  faceplateBottomSheet.appendChild(span);
+
+  document.body.appendChild(shredditApp);
+}
+
+const onload = () => {
+  setTimeout(addElementToBody, 200);
+};
+window.onload = onload;
+</script>
+
+</body>
+</html>
