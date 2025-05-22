@@ -12,16 +12,23 @@
 
 const addElementToBody = () => {
   const rootNode = document.createElement('root-node');
-  rootNode.setAttribute('id', 'root-node-id');
+  rootNode.setAttribute('class', 'root-node-class');
 
   const childNode = document.createElement('child-node');
-  childNode.setAttribute('id', 'child-node-id');
+  childNode.setAttribute('class', 'child-node-class');
   rootNode.appendChild(childNode);
 
   const span = document.createElement('span');
-  span.setAttribute('id', 'span-id');
   span.textContent = 'View in App';
   childNode.appendChild(span);
+
+  const childNode2 = document.createElement('child-node');
+  childNode2.setAttribute('class', 'child-node-class');
+  rootNode.appendChild(childNode2);
+
+  const p = document.createElement('p');
+  p.textContent = 'View in App';
+  childNode2.appendChild(p);
 
   document.body.appendChild(rootNode);
 }
