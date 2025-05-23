@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Dynamic Test</title>
+</head>
+<body>
+
+<h1>heading</h1>
+<p>paragraph.</p>
+
+<script>
+
+const addElementsToBody = () => {
+  const viewInAppBanner = document.createElement('view-in-app-banner');
+  viewInAppBanner.setAttribute('id', 'view-in-app-banner-id');
+
+  const span = document.createElement('span');
+  span.setAttribute('id', 'span-id');
+  span.textContent = 'View in App';
+  viewInAppBanner.appendChild(span);
+
+  // inflate mutation score to trigger polling in `content_cosmetic`
+  for (let i = 0; i < 2000; i++) {
+    const span = document.createElement('span');
+    span.setAttribute('id', 'span-id-' + i);
+    document.body.appendChild(span);
+  }
+
+  document.body.appendChild(viewInAppBanner);
+}
+
+const onload = () => {
+  // add initial elements to trigger mutation observer which should 
+  // switch to polling alternative strategy
+  setTimeout(addElementsToBody, 200);
+  // add items with large score
+  setTimeout(addElementsToBody, 2000);
+};
+window.onload = onload;
+</script>
+
+</body>
+</html>
