@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Style Priority</title>
+    <style>
+        p {
+          color: red;
+          font-size: 20pt;
+        }
+    </style>
+  </head>
+  <body>
+    <p>My text</p>
+    <p style="color:green">My text with inline style</p>
+    <p style="color:pink !important">My text with inline !important style</p>
+    <style>
+        p {
+          color: blue;
+          font-size: 20pt;
+        }
+    </style>
+  </body>
+</html>
