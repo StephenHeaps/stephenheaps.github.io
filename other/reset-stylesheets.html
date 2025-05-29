@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Stylesheet</title>
+    <style>
+        p {
+          color: blue;
+        }
+    </style>
+  </head>
+  <body>
+    <p style="font-size: 40pt;">My text</p>
+    <script>
+      const onload = () => {
+        // clear adoptedStyleSheets after 200ms to simulate site adding their own after a delay
+        const resetAdoptedStyleSheets = () => {
+          if ('adoptedStyleSheets' in document && document.adoptedStyleSheets.length !== 0) {
+            const siteStyleSheetElm = new CSSStyleSheet();
+            siteStyleSheetElm.replaceSync('p { color: red; }');
+            // Idealy should include `...document.adoptedStyleSheets` to not overwrite
+            // but no guarantee a site does this.
+            document.adoptedStyleSheets = [siteStyleSheetElm];
+            console.log('Reset adoptedStyleSheets');
+          }
+        }
+        window.setTimeout(resetAdoptedStyleSheets, 200);
+      }
+      window.onload = onload
+    </script>
+  </body>
+</html>
