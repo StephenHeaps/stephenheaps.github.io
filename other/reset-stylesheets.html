@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Stylesheet</title>
+    <style>
+        p {
+          color: blue;
+          font-size: 20pt;
+        }
+    </style>
+  </head>
+  <body>
+    <p>My text</p>
+    <script>
+      const onload = () => {
+        // clear adoptedStyleSheets every 100ms
+        const resetAdoptedStyleSheets = () => {
+          if ('adoptedStyleSheets' in document && document.adoptedStyleSheets.length !== 0) {
+            document.adoptedStyleSheets = []
+            console.log('Reset adoptedStyleSheets');
+          }
+        }
+        window.setInterval(resetAdoptedStyleSheets, 100);
+      }
+      window.onload = onload
+    </script>
+  </body>
+</html>
