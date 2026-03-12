@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Adblock Exclusion Tests</title>
+  </head>
+  <body>
+    <p style="font-size: 20pt;">3rd Party Image (Content Blocker)</p>
+    <img src="https://brave.com/static-assets/images/brave-logo-sans-text.svg">
+
+    <p style="font-size: 20pt;">Cosmetic Filtering</p>
+    <div id="should-be-hidden">This should be hidden</div>
+
+    <p style="font-size: 20pt;">Request Blocking</p>
+    <div id="request-blocking-div"></div>
+
+    <p style="font-size: 20pt;">Scriptlets</p>
+    <div id="scriptlets-div"></div>
+
+    <script>
+      const displaySvalInScriptletsDiv = () => {
+        const scriptletsDiv = document.getElementById('scriptlets-div');
+        const div = document.createElement('div');
+        div.textContent = `First party body: ${window.sval}`;
+        scriptletsDiv.appendChild(div);
+      }
+      async function fetchData() {
+        const displayResponseInDiv = (text) => {
+          const requestBlockingDiv = document.getElementById('request-blocking-div');
+          const div = document.createElement('div');
+          div.textContent = text;
+          requestBlockingDiv.appendChild(div);
+        }
+        const url = "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d9/Flag_of_Canada_%28Pantone%29.svg/250px-Flag_of_Canada_%28Pantone%29.svg.png";
+        try {
+          const response = await fetch(url);
+          if (!response.ok) {
+            displayResponseInDiv('request failed')
+          } else {
+            displayResponseInDiv('request allowed')
+          }
+        } catch (error) {
+            displayResponseInDiv('request errored / blocked')
+        }
+      }
+      const onload = async () => {
+        setTimeout(displaySvalInScriptletsDiv, 100);
+        await fetchData();
+      }
+
+      window.onload = onload;
+    </script>
+  </body>
+</html>
