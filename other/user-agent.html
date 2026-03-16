@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>User Agent Info</title>
+  <style>
+    .container {
+      max-width: 600px;
+      margin: 2;
+      padding: 2;
+      display: grid;
+      grid-template-columns: max-content 1fr;
+      align-items: baseline;
+    }
+
+    h1 {
+      margin-bottom: 0;
+      font-size: 1.8rem;
+      font-weight: 600;
+      grid-column: 1 / -1;
+    }
+    label {
+      display: contents;
+    }
+    label > span:first-child {
+      white-space: nowrap;
+    }
+    .value {
+      font-family: 'Courier New', monospace;
+      font-weight: 500;
+      color: #007bff;
+      padding: 0.25rem 0.75rem;
+      min-width: 200px;
+    }   
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>User Agent Info</h1>
+    <label for="userAgent"><span>First User Agent: </span><span id="stored-userAgent" class="value">Loading...</span></label>
+    <label for="userAgent"><span>Current User Agent: </span><span id="current-userAgent" class="value">Loading...</span></label>
+  </div>
+
+  <script>
+    function setCookie(name, value, days) {
+      const date = new Date();
+      date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+      const expires = "expires=" + date.toUTCString();
+      document.cookie = name + "=" + encodeURIComponent(value) + ";" + expires + ";path=/";
+    }
+
+    function getCookie(name) {
+      const cookieName = name + "=";
+      const cookies = document.cookie.split(';');
+
+      for (let cookie of cookies) {
+        let trimmed = cookie.trim();
+        if (trimmed.startsWith(cookieName)) {
+          return decodeURIComponent(trimmed.substring(cookieName.length));
+        }
+      }
+      return undefined;
+    }
+
+    window.onload = function () {
+      var storedUserAgent = getCookie("userAgent");
+      // don't reset cookie once stored, we are tracking first known user agent
+      if (storedUserAgent == undefined) {
+        const userAgent = navigator.userAgent;
+        setCookie("userAgent", userAgent, 30); // 30 days
+        storedUserAgent = getCookie("userAgent");
+      }
+
+      document.getElementById("stored-userAgent").textContent = storedUserAgent || "Not available";
+      document.getElementById("current-userAgent").textContent = navigator.userAgent || "Not available";
+
+      if (storedUserAgent && storedUserAgent !== navigator.userAgent) {
+        const warning = document.createElement("p");
+        warning.textContent = "Warning: User agent has changed since first visit.";
+        warning.style.cssText = "color: red; font-weight: bold; grid-column: 1 / -1;";
+        document.querySelector(".container").appendChild(warning);
+      }
+    };
+  </script>
+</body>
+</html>   
