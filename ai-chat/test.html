@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+  <div id="request-blocking">
+  </div>
+
+  <div id="content-blocker">
+  </div>
+
+  <div id="scriptlets">
+    <iframe src="https://kylehickinson.com" width="500" height="500"></iframe>
+  </div>
+
+<script>
+
+const onload = () => {
+  /// This should be blocked by Request Blocking script with `stephenheaps.github.io/$first-party`
+  fetch('./request-blocking.txt')
+    .then(response => {
+      if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+      return response.text();
+    })
+    .then(text => {
+      const requestBlockingDiv = document.getElementById('request-blocking');
+      const h3Element = document.createElement('h1');
+      h3Element.textContent = text;
+      requestBlockingDiv.appendChild(h3Element);
+    })
+    .catch(error => {
+      console.error('Failed to load script:', error);
+    });
+
+  /// This should be blocked by Content Blocker with `stephenheaps.github.io/$first-party`
+  const contentBlockerDiv = document.getElementById('content-blocker')
+  const firstPartyScript = document.createElement('script');
+  firstPartyScript.src = './content-blocker.js';
+  contentBlockerDiv.appendChild(firstPartyScript);
+}
+
+window.onload = onload;
+
+</script>
+
+</body>
+</html>
+
