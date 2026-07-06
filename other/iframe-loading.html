@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Iframe & Fetch Demo</title>
+</head>
+<body>
+
+  <h3>Content from ad.txt:</h3>
+  <div id="content-display" style="border: 1px solid #ccc; padding: 10px; min-height: 50px;">
+      Loading...
+  </div>
+
+  <iframe id="my-iframe" src="internal://about" style="display:none;"></iframe>
+
+  <script>
+    const iframe = document.createElement('iframe');
+    iframe.id = 'dynamic-iframe';
+    iframe.src = 'internal://about';
+    iframe.style.display = 'none';
+    document.body.appendChild(iframe);
+
+    const fileUrl = 'https://raw.githubusercontent.com/StephenHeaps/stephenheaps.github.io/refs/heads/main/local-frames/ad.txt';
+    const displayDiv = document.getElementById('content-display');
+
+    fetch(fileUrl)
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        return response.text();
+      })
+      .then(textData => {
+        displayDiv.textContent = textData;
+
+        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+        iframeDoc.open();
+        iframeDoc.write(`<h1>Iframe Created</h1><p>Main frame successfully fetched data.</p>`);
+        iframeDoc.close();
+      })
+      .catch(error => {
+        console.error('Fetch error:', error);
+        displayDiv.textContent = 'Error loading content: ' + error.message;
+      });
+  </script>
+</html>   

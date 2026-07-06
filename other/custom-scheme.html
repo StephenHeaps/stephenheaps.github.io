@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Custom Scheme</title>
+  </head>
+  <body>
+    <script>
+      // create iframe
+      const createAndAddIframe = (src, id) => {
+        const localFrame = document.createElement('iframe');
+        localFrame.src = src;
+        localFrame.id = id
+        localFrame.width = 400;
+        localFrame.height = 400;
+        document.body.appendChild(localFrame);
+        return localFrame;
+      }
+
+      // add element for cosmetic filtering
+      const addAdElementTo = (document) => {
+        const localFrameAd = document.createElement('should-be-hidden');
+        localFrameAd.id = "local-frame-ad";
+        localFrameAd.style.display = 'block';
+        localFrameAd.innerText = 'This should be hidden';
+        document.body.appendChild(localFrameAd);
+      }
+
+      const makeRequestIn = (document, window) => {
+        const fileUrl = 'https://raw.githubusercontent.com/StephenHeaps/stephenheaps.github.io/refs/heads/main/local-frames/ad.txt';
+        const displayDiv = document.createElement('ad-load-display-div');
+        displayDiv.style.display = 'block';
+        displayDiv.textContent = 'Loading...'
+        document.body.appendChild(displayDiv);
+        window.fetch(fileUrl)
+          .then(response => {
+            if (!response.ok) {
+              throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.text();
+          })
+          .then(textData => {
+            console.log('Fetched ad.txt successfully.');
+            displayDiv.textContent = textData;
+          })
+          .catch(error => {
+            console.error('Fetch error:', error);
+            displayDiv.textContent = 'Error loading content: ' + error.message;
+          });
+      }
+
+      const displaySvalIn = (window, div) => {
+        div.textContent = `First local frame body: ${window.sval}`;
+      }
+
+      const onload = () => {
+        const internalSchemeFrame = createAndAddIframe('internal://brave', 'internal-brave-iframe');
+        const aboutBlankFrame = createAndAddIframe('about:blank', 'about-blank-iframe');
+
+        // cosmetic filtering
+        addAdElementTo(document);
+        addAdElementTo(internalSchemeFrame.contentDocument);
+        addAdElementTo(aboutBlankFrame.contentDocument);
+
+        // request blocking
+        makeRequestIn(document, window);
+        makeRequestIn(internalSchemeFrame.contentDocument, internalSchemeFrame.contentWindow);
+        makeRequestIn(aboutBlankFrame.contentDocument, aboutBlankFrame.contentWindow);
+
+        // scriptlets
+        const mainFrameSvalDiv = document.createElement('sval-div');
+        mainFrameSvalDiv.textContent = 'Loading...'
+        document.body.appendChild(mainFrameSvalDiv);
+        const internalSchemeFrameSvalDiv = internalSchemeFrame.contentDocument.createElement('sval-div');
+        internalSchemeFrameSvalDiv.textContent = 'Loading...'
+        internalSchemeFrame.contentDocument.body.appendChild(internalSchemeFrameSvalDiv);
+        const aboutBlankFrameSvalDiv = aboutBlankFrame.contentDocument.createElement('sval-div');
+        aboutBlankFrameSvalDiv.textContent = 'Loading...'
+        aboutBlankFrame.contentDocument.body.appendChild(aboutBlankFrameSvalDiv);
+
+        setTimeout(displaySvalIn, 200, window, mainFrameSvalDiv);
+        setTimeout(displaySvalIn, 200, internalSchemeFrame.contentWindow, internalSchemeFrameSvalDiv);
+        setTimeout(displaySvalIn, 200, aboutBlankFrame.contentWindow, aboutBlankFrameSvalDiv);
+      }
+
+      window.onload = onload;
+    </script>
+  </body>
+</html>
