@@ -1,0 +1,14 @@
+<!doctype html>
+<html>
+<body>
+<meta name="viewport" content="width=device-width">
+<h1 id="status" style="font:48px sans-serif">Loading…</h1>
+<script>
+  const s = document.getElementById('status')
+  const show = (text, color) => { s.textContent = text; s.style.color = color }
+</script>
+<script src="https://securepubads.g.doubleclick.net/tag/js/gpt.js"
+        onload="show('LOADED', 'red')"
+        onerror="show('BLOCKED', 'green')"></script>
+</body>
+</html>
