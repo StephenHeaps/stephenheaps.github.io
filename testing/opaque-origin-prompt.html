@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+  <html>
+  <head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Opaque origin JS dialog repro</title>
+  <style>
+    body { font-family: -apple-system, sans-serif; padding: 16px; }
+    button { display: block; width: 100%; margin: 8px 0; padding: 12px; font-size: 16px; }
+    h2 { margin-top: 24px; font-size: 18px; }
+    iframe { width: 100%; height: 60px; border: 1px solid #ccc; }
+  </style>
+  </head>
+  <body>
+  <h1>JS dialog repro</h1>
+
+  <h2>Control (normal origin, should not crash)</h2>
+  <button onclick="alert('top alert')">alert()</button>
+  <button onclick="confirm('top confirm')">confirm()</button>
+  <button onclick="prompt('top prompt', 'default')">prompt()</button>
+
+  <h2>Sandboxed srcdoc iframe (opaque)</h2>
+  <button onclick="sandboxed('alert')">alert()</button>
+  <button onclick="sandboxed('confirm')">confirm()</button>
+  <button onclick="sandboxed('prompt')">prompt()</button>
+
+  <h2>data: URL iframe (opaque)</h2>
+  <button onclick="dataFrame('prompt')">prompt()</button>
+
+
+  <h2>Sandboxed iframe with a button inside (user gesture in frame)</h2>
+  <iframe sandbox="allow-scripts allow-modals"
+    srcdoc="<button onclick=&quot;document.getElementById('o').textContent='origin: '+self.origin+' result: '+prompt('x','d')&quot;>prompt() in
+  frame</button><span id=o></span>"></iframe>
+
+  <h2>Top-level data: URL</h2>
+  <button onclick="location.href='data:text/html,<script>prompt(1)</script>'">Navigate</button>
+
+  <h2>about:blank popup</h2>
+  <button onclick="popup()">window.open + prompt()</button>
+
+  <div id="frames"></div>
+
+  <script>
+    function addFrame(attrs) {
+      const f = document.createElement('iframe');
+      Object.assign(f, attrs);
+      document.getElementById('frames').appendChild(f);
+    }
+    function sandboxed(fn) {
+      addFrame({
+        sandbox: 'allow-scripts allow-modals',
+        srcdoc: `<script>console.log('origin', self.origin); ${fn}('sandboxed ${fn}')<\/script>`,
+      });
+    }
+    function dataFrame(fn) {
+      addFrame({
+        src: `data:text/html,<script>${fn}('data ${fn}')<\/script>`,
+      });
+    }
+    function popup() {
+      const w = window.open('', '_blank');
+      if (w) w.eval("prompt('popup prompt')");
+    }
+  </script>
+  </body>
+  </html>
