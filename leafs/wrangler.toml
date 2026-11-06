@@ -1,0 +1,11 @@
+name = "nhl-cors-proxy"
+main = "worker.js"
+compatibility_date = "2024-11-01"
+
+[observability.logs]
+enabled = false
+invocation_logs = false
+
+[observability.traces]
+enabled = false
+

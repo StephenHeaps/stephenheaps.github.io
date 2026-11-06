@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Maple Leafs Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800&family=Barlow+Semi+Condensed:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+   :root{
+     --bg:#141416;
+     --panel:#1c1c20;
+     --panel-2:#232328;
+     --line:#3a3a40;
+     --ink:#f4f4f5;
+     --muted:#8a8f98;
+     --muted-2:#5f646d;
+     --win:#33c24a;
+     --loss:#e23b3b;
+     --otl:#d7b24a;
+     --pending:#5a5a63;
+     --accent:#c0c6d0;
+   }
+   *{box-sizing:border-box}
+   html,body{margin:0;padding:0}
+   body{
+     background:var(--bg);
+     color:var(--ink);
+     font-family:"Barlow",-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+     font-feature-settings:"tnum";
+     -webkit-font-smoothing:antialiased;
+     min-height:100vh;
+     padding:14px;
+   }
+   .board{max-width:1080px;margin:0 auto;}
+   .num{font-family:"Barlow Semi Condensed","Barlow",sans-serif}
+
+   /* ---------- HEADER ---------- */
+   .header{
+     display:flex;align-items:stretch;flex-wrap:wrap;
+     border-bottom:1px solid var(--line);
+     padding-bottom:14px;margin-bottom:4px;
+   }
+   .brand{flex:0 0 420px;display:flex;align-items:stretch;}
+   .crest{
+     flex:0 0 132px;display:flex;align-items:center;justify-content:center;
+     background:linear-gradient(135deg,#16296a 0%,#0d1a3d 100%);
+     clip-path:polygon(0 0,100% 0,86% 100%,0 100%);
+   }
+   .crest img{width:78px;height:78px;filter:drop-shadow(0 2px 6px rgba(0,0,0,.5))}
+   .record{display:flex;flex-direction:column;justify-content:center;padding-left:26px;}
+   .record .wl{font-size:62px;line-height:.9;margin:0;letter-spacing:2px;font-weight:800;}
+   .record .wl .dash{color:#cfd3da;margin:0 1px;}
+   .record .sub{font-size:17px;color:var(--ink);font-weight:600;margin-top:8px;}
+   .meta{
+     flex:1;display:flex;flex-direction:column;justify-content:center;align-items:flex-end;text-align:right;
+   }
+   .meta .date{font-size:20px;font-weight:700;letter-spacing:.3px}
+   .meta .splits{font-size:15px;color:var(--accent);margin-top:7px}
+   .meta .splits b{color:var(--ink);font-weight:700}
+   .meta .sched{font-size:13px;color:var(--muted);margin-top:8px}
+
+   /* ---------- SECTION TITLES ---------- */
+   .sec-title{display:flex;align-items:baseline;justify-content:space-between;margin-top:16px;margin-bottom:10px}
+   .sec-title h2{font-size:22px;font-weight:800;margin:0;letter-spacing:.2px}
+   .sec-title h2 .pill{color:var(--accent);margin-left:8px;letter-spacing:1px}
+   .sec-title .note{font-size:13px;color:var(--muted);text-align:right}
+
+   /* ---------- CHARTS ---------- */
+   svg.chart{display:block;width:100%;height:auto;overflow:hidden}
+   .chart-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+   .chart-scroll svg.chart{min-width:760px}
+   #pl{margin-bottom:14px}
+   .axis-txt{fill:var(--muted-2);font-size:11px;font-family:"Barlow",sans-serif}
+   .month-txt{fill:var(--muted);font-size:12px;font-weight:700;font-family:"Barlow",sans-serif}
+
+   /* ---------- BOTTOM GRID ---------- */
+   .grid3{display:grid;grid-template-columns:1.5fr 1fr;gap:22px;margin-top:16px;align-items:start;}
+   .col{display:flex;flex-direction:column;}
+   .col-head{font-size:15px;font-weight:800;margin:0 0 10px;display:flex;align-items:baseline;justify-content:space-between;}
+   .col-head .tag{font-size:11px;color:var(--muted);font-weight:600;letter-spacing:1px;text-transform:uppercase}
+
+   .div-wrap{display:grid;grid-template-columns:1fr 1fr;gap:4px 18px;}
+   .div-block{margin-bottom:14px}
+   .div-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:6px}
+   .div-head .name{font-size:16px;font-weight:800}
+   .div-head .rec{font-size:15px;color:var(--accent);font-weight:700}
+   .team-row{display:flex;align-items:center;gap:8px;height:27px}
+   .team-row .logo{width:24px;height:24px;flex:0 0 24px}
+   .team-row .cells{display:flex;gap:8px;margin-left:auto}
+   .cell{width:18px;height:18px;display:flex;align-items:center;justify-content:center}
+   .cell svg{width:18px;height:18px;display:block}
+   /* Season series: the Leafs vs each opponent, with the head-to-head record. */
+   .ss-row{display:flex;align-items:center;gap:5px;height:25px}
+   .ss-row .logo{width:19px;height:19px;flex:0 0 19px}
+   .ss-row .vs{font-size:10px;color:var(--muted);font-weight:700}
+   .ss-row .nm{flex:1;font-weight:700;letter-spacing:.3px;font-size:12px;color:var(--ink)}
+   .ss-row .rec{font-weight:700;color:var(--accent)}
+   .ss-row.noplay .rec{color:var(--muted);opacity:.4}
+   .ss-row.noplay .nm,.ss-row.noplay .logo{opacity:.45}
+
+   .pp-group{margin-bottom:12px}
+   .pp-group .g-title{font-size:13px;font-weight:800;color:var(--ink);letter-spacing:.5px;margin-bottom:6px}
+   .pp-row{display:flex;align-items:center;gap:10px;height:28px;font-size:15px}
+   .pp-row .rk{width:30px;color:var(--muted);font-weight:700;font-size:13px}
+   .pp-row .logo{width:22px;height:22px;flex:0 0 22px}
+   .pp-row .nm{flex:1;font-weight:700;letter-spacing:.5px}
+   .pp-row .gp{width:44px;text-align:right;color:var(--muted);font-weight:600}
+   .pp-row .pts{width:34px;text-align:right;font-weight:800}
+   .pp-row.hi{background:var(--panel-2);border-radius:5px;margin:0 -8px;padding:0 8px}
+   .pp-row.qualify{border-bottom:1px dashed var(--line);border-radius:0;margin-bottom:2px}
+   .pp-head{display:flex;align-items:center;gap:10px;padding:0 8px 4px 16px;height:18px;font-size:11px;font-weight:800;letter-spacing:.6px;color:var(--muted);border-bottom:1px solid var(--line)}
+   .pp-head .rk{width:30px}.pp-head .logo{width:22px;flex:0 0 22px;height:0}.pp-head .nm{flex:1}
+   .pp-row .wl{width:22px;text-align:right;color:var(--muted);font-weight:600}
+   .pp-head .wl{width:22px;text-align:right}
+   .pp-conf{margin-top:0}
+   .pp-conf + .pp-conf{margin-top:14px}
+   .pp-conf-label{font-size:11px;font-weight:800;color:var(--muted);letter-spacing:1.4px;text-transform:uppercase;margin-bottom:6px;padding-left:2px}
+   .pp-conf-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px 24px}
+   .pp-group{margin-bottom:0}
+   @media(max-width:860px){.pp-conf-row{grid-template-columns:1fr 1fr}}
+   @media(max-width:560px){.pp-conf-row{grid-template-columns:1fr}}
+   .g2g-pick{font-size:13px;color:var(--muted);margin:0 0 10px;min-height:18px;font-weight:600;letter-spacing:.3px}
+   .g2g-pick.on{color:var(--accent)}
+   .hit{fill:none;pointer-events:all;cursor:pointer}
+   .hit.picked{fill:var(--accent);opacity:.12}
+   .pp-head .gp{width:44px;text-align:right}.pp-head .pts{width:34px;text-align:right}
+
+   .leaders-wrap{margin-top:16px}
+   .grid-leaders{display:grid;grid-template-columns:1fr 1fr 1fr;gap:22px;align-items:start}
+   .lg-group{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+   .lg-title{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--accent);margin-bottom:4px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+   .lg-title .cnt{font-size:11px;color:var(--muted);font-weight:600;letter-spacing:.3px;text-transform:none}
+   .stat-row{display:flex;align-items:center;gap:10px;padding:8px 0}
+   .stat-row + .stat-row{border-top:1px solid var(--line)}
+   .stat-row .mug{width:30px;height:30px;border-radius:50%;object-fit:cover;background:var(--panel-2);border:1px solid var(--line);flex:0 0 30px}
+   .stat-row .lbl{flex:1;min-width:0;display:flex;flex-direction:column}
+   .stat-row .cat{font-size:10px;letter-spacing:.6px;color:var(--muted);text-transform:uppercase;font-weight:700}
+   .stat-row .cat .arrow{color:var(--muted-2)}
+   .stat-row .who{font-size:14px;font-weight:700;line-height:1.15;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+   .stat-row .val{font-size:21px;font-weight:800;color:var(--accent);text-align:right;flex:0 0 auto;white-space:nowrap}
+   .stat-row .val .u{display:block;font-size:10px;color:var(--muted);font-weight:600;letter-spacing:.3px;margin-top:1px}
+   @media(max-width:1000px){.grid-leaders{grid-template-columns:1fr}}
+
+   .next-row{display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:7px 10px;margin-bottom:7px}
+   .next-row .when{flex:0 0 66px;text-align:center;border-right:1px solid var(--line);padding-right:8px}
+   .next-row .when .dow{font-size:10px;color:var(--muted);letter-spacing:1px;font-weight:700}
+   .next-row .when .day{font-size:22px;font-weight:800;line-height:1}
+   .next-row .at{font-size:13px;color:var(--muted);width:16px;text-align:center}
+   .next-row .op img{width:34px;height:34px}
+   .next-row .time{font-size:15px;font-weight:700;text-align:right;min-width:64px}
+
+   .last-row{display:flex;align-items:center;gap:10px;margin-bottom:9px}
+   .last-row img{width:30px;height:30px}
+   .last-row .badge{width:26px;height:26px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;color:#fff}
+   .last-row .badge.w{background:var(--win)}
+   .last-row .badge.l{background:var(--loss)}
+   .last-row .badge.ot{background:var(--otl);color:#231a00}
+   .last-row .score{font-size:18px;font-weight:800}
+   .last-row .oppab{font-size:13px;color:var(--muted);flex:1}
+
+   .legend{
+     display:flex;flex-wrap:wrap;align-items:center;gap:18px;
+     border-top:1px solid var(--line);margin-top:18px;padding-top:12px;
+     font-size:13px;color:var(--muted);
+   }
+   .legend .item{display:flex;align-items:center;gap:7px}
+   .swatch{width:13px;height:13px;border-radius:3px;display:inline-block}
+   .legend .sep{width:1px;height:14px;background:var(--line)}
+
+   .foot{display:flex;justify-content:space-between;align-items:center;margin-top:6px}
+   .updated{font-size:11px;color:var(--muted-2)}
+   .brandmark{font-weight:800;letter-spacing:3px;color:var(--muted-2);font-size:13px}
+
+   .loading,.error{text-align:center;color:var(--muted);padding:30px;font-size:14px}
+   .error{color:#e2a0a0}
+   #staleBar{display:none;background:#3a2f10;color:#e8c86a;border:1px solid #5c4a18;border-radius:8px;padding:10px 14px;margin:0 0 14px;font-size:13px;font-weight:600;text-align:center;line-height:1.5}
+   #staleBar.on{display:block}
+   #staleBar a{color:#f0d788;text-decoration:underline;cursor:pointer;margin-left:6px}
+   #staleBar b{color:#f0d788}
+   .errbtn{display:inline-block;margin-top:12px;border:1px solid var(--line);color:var(--ink);background:var(--panel);border-radius:6px;padding:6px 16px;cursor:pointer;font-family:inherit;font-size:13px}
+
+   @media(max-width:1000px){
+     .grid3{grid-template-columns:1fr}
+     .brand{flex-basis:100%}
+     .record{padding-left:8px}
+     .meta{align-items:flex-start;text-align:left;margin-top:8px}
+     .div-wrap{grid-template-columns:1fr}
+   }
+</style>
+</head>
+<body>
+<div class="board" id="board">
+   <div id="staleBar"></div>
+   <div id="load" class="loading">Loading live Maple Leafs data…</div>
+   <div id="content" style="display:none"></div>
+</div>
+
+<script>
+"use strict";
+
+/* =====================================================================================
+   Dashboard — a live NHL snapshot of the Toronto Maple Leafs.
+   Data source: the NHL public web API (api-web.nhle.com), which does not send CORS
+   headers, so each request is routed through a public CORS proxy with a local cache.
+    =================================================================================== */
+
+const TEAM = "TOR";
+const TEAM_ID = 10;
+const DIVISIONS = ["Atlantic","Pacific","Metropolitan","Central"];
+
+const TTL = {schedule:10*60e3, standings:10*60e3, clubstats:10*60e3, allschedule:6*3600e3};
+
+/* ---- CORS proxying + localStorage cache ------------------------------------------- */
+// Paste your deployed Cloudflare Worker URL here, e.g.
+//   "https://leafs-data.stephenheaps.workers.dev"
+// It is tried first; the public proxies below are only a fallback.
+// Deploy a SECOND independent worker and paste its URL into WORKER2 — a per-worker
+// Cloudflare rate-limit/WAF rule rarely affects a sibling worker, so it gives the
+// dashboard a clean escape hatch if the primary is blocked. (Every free public proxy
+// is currently down, so the worker is effectively the only live route.)
+const WORKER = "https://nhl-cors-proxy.steaps-4-cloudflare.workers.dev";
+const WORKER2 = ""; // e.g. "https://nhl-cors-proxy-2.steaps-4-cloudflare.workers.dev"
+const toRoute = base => u => base + u.replace(/^https:\/\/api-web\.nhle\.com/, "");
+const PROXIES = [];
+if (WORKER)  PROXIES.push(toRoute(WORKER));
+if (WORKER2) PROXIES.push(toRoute(WORKER2));
+
+// Off by default: the 32-team league sweep costs ~31 extra requests per fresh load
+// and is the main source of 429s. Flip to true to re-enable recent-form + schedule strength.
+const LEAGUE_SWEEP = false;
+// Global circuit breaker: on the first 429, suppress every fetch for the session.
+let throttled = false;
+let usedStale = false;
+function cacheGet(key, ttl){
+  try{
+    const raw = localStorage.getItem("gb:" + key);
+    if(raw){ const c = JSON.parse(raw); if(Date.now() - c.t < ttl) return c.v; }
+   }catch(e){}
+  return null;
+}
+function cacheSet(key, v){ try{ localStorage.setItem("gb:" + key, JSON.stringify({t:Date.now(), v})); }catch(e){} }
+
+async function fetchJSON(path, cacheKey, ttl){
+  // Circuit breaker: on the first 429 anywhere, suppress every fetch for the session.
+  if(throttled) throw new Error("Throttled (429) — stop. Reload the page to retry.");
+  const url = "https://api-web.nhle.com" + path;
+  if(cacheKey){ const c = cacheGet(cacheKey, ttl); if(c !== null) return c; }
+  let lastErr;
+  for(const make of PROXIES){
+    try{
+      const controller = new AbortController();
+      const timer = setTimeout(()=>controller.abort(), 12000);
+      const res = await fetch(make(url), {headers:{Accept:"application/json"}, signal:controller.signal});
+      clearTimeout(timer);
+      if(res.status===429){ throttled=true; throw new Error("Throttled (429 Too Many Requests)"); }
+      if(!res.ok){ lastErr = new Error("HTTP " + res.status); continue; }
+      const j = JSON.parse(await res.text());
+      if(cacheKey) cacheSet(cacheKey, j);
+      return j;
+     }catch(err){
+      if(throttled) throw err; // 429 tripped the breaker — do not fall through to other routes
+      lastErr = err;
+    }
+  }
+  // Total live failure (CORS block, network down, all routes dead): fall back to the
+  // last saved snapshot so the dashboard shows a clearly-flagged stale view, not blank.
+  if(cacheKey){
+    const last = cacheGet(cacheKey, Infinity);
+    if(last !== null){ usedStale = true; return last; }
+  }
+  throw lastErr || new Error("All routes failed for this request");
+}
+
+/* ---- helpers -------------------------------------------------------------- */
+const L = o => (o && o.default) || o;
+function ordinal(n){
+  const s=["th","st","nd","rd"], v=n%100;
+  return n + (s[(v-20)%10] || s[v] || s[0]);
+}
+const wl = r => `${r[0]}-${r[1]}-${r[2]}`;
+function initials(p){
+  const fn = L(p.firstName) || "";
+  const ln = L(p.lastName) || "";
+  return (fn ? fn[0] + ". " : "") + ln;
+}
+function firstName(p){ return L(p.firstName); }
+function lastName(p){
+  let d = L(p.lastName) || "";
+  d = d.replace(/(Kä)hkonen/,(m)=>m); // keep accents
+  return d;
+}
+
+const LIVE_STATES = new Set(["IN","PRES","PRE","PRELIVE","PREVIEW","PROG","SUSP","POSTP","POSTPONED","CANCEL","CANCELLED"]);
+// Exclude exhibition / pre-season games from charts. The API tags non-regular
+// gameTypes (exhibition often "4"/"P"); a no-op when the schedule has none.
+function isRegular(g){
+  const t = L(g.gameType ?? g.gameTypeCode);
+  const s = String(t).trim();
+  // 1=pre-season, 2=regular season, 3=post-season. Only the regular season
+  // counts toward the board; a game with no type is treated as regular so the
+  // dashboard still renders if the field is ever absent.
+  if(t===undefined || t===null || s==="") return true;
+  return s==="2";
+}
+/* A game is finished when both scores are present and it isn't in a live/pre-game
+   state. The 2026-27 API labels some completed games "OFF" instead of "FINAL", so
+   the state label alone is not enough. */
+function isFinished(g){
+  const h=g.homeTeam.score, a=g.awayTeam.score;
+  if(h===null||h===undefined||a===null||a===undefined) return false;
+  return !LIVE_STATES.has(g.gameState);
+}
+function torSide(g){
+  const homeIs = TEAM_ID === g.homeTeam.id;
+  return {
+    isHome:homeIs,
+    torTeam: homeIs ? g.homeTeam : g.awayTeam,
+    oppTeam: homeIs ? g.awayTeam : g.homeTeam,
+    tor: homeIs ? g.homeTeam.score : g.awayTeam.score,
+    opp: homeIs ? g.awayTeam.score : g.homeTeam.score
+  };
+}
+/* 'W' | 'L' | 'OTL' | 'P' (pending) — judged from 'ab' unless a team is given. */
+function outcome(g, ab=TEAM){
+  if(!isFinished(g)) return "P";
+  const home = g.homeTeam.abbrev===ab;
+  const me = home ? g.homeTeam : g.awayTeam, oth = home ? g.awayTeam : g.homeTeam;
+  if(me.score==null||oth.score==null) return "P";
+  // NHL model: any win counts as W; a loss decided in OT or the SO is an OT loss,
+  // a regulation loss is L. Decided period comes from gameOutcome.lastPeriodType.
+  const lt=(g.gameOutcome&&g.gameOutcome.lastPeriodType)||"REG";
+  if(me.score>oth.score) return "W";
+  if(me.score<oth.score) return (lt==="OT"||lt==="SO") ? "OTL" : "L";
+  return "OTL";
+}
+const OUTCOLOR={W:"var(--win)", L:"var(--loss)", OTL:"var(--otl)", P:"var(--pending)"};
+
+function icon(home, color){
+  const fill = color || "var(--pending)";
+  if(home)
+     return `<svg viewBox="0 0 24 24" fill="${fill}"><path d="M12 3 3 11.2h2.5V21h5.3v-6.4h3.4V21h5.3V11.2H21z"/></svg>`;
+   // paper plane (away)
+   return `<svg viewBox="0 0 24 24" fill="${fill}"><path d="M22 2 2 10.2l7.2 2.5L12.8 21l3.3-8L22 10z"/></svg>`;
+}
+function dotSvg(home){
+  return home
+     ? `<svg width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="6" fill="currentColor"/></svg>`
+     : `<svg width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="4.2" fill="none" stroke="currentColor" stroke-width="2.2"/></svg>`;
+}
+function darkLogo(ab){ return ab ? `https://assets.nhle.com/logos/nhl/svg/${ab}_dark.svg` : ""; }
+function shortDate(at){
+  const ms = Date.parse(at);
+  if(isNaN(ms)) return "";
+  return new Date(ms).toLocaleDateString("en-US", {month:"short", day:"numeric", timeZone:"America/Toronto"});
+}
+// A compact caption shown when a game's bar or bottom dot is tapped.
+function pickLabel(g){
+  const home = TEAM_ID === g.homeTeam.id;
+  const opp = home ? g.awayTeam.abbrev : g.homeTeam.abbrev;
+  const when = shortDate(g.startTimeUTC);
+  if(isFinished(g)){
+    const s = torSide(g);
+    if(s.tor!=null && s.opp!=null) return `vs ${opp} · ${s.tor}-${s.opp} · ${when}`;
+  }
+  return `vs ${opp} · ${when} · upcoming`;
+}
+const escAttr = s => String(s).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;");
+
+function toEastern(utcISO, offset){
+  let wallMs = Date.parse(utcISO);
+  if(offset){
+     const m = String(offset).trim().match(/^([+-])(\d{2}):(\d{2})$/);
+     if(m){ wallMs += (((parseInt(m[2]*60,10)+parseInt(m[3],10))) * (m[1]==="-"? -1:1) * 60000); }
+   }
+  const d = new Date(wallMs);
+  let h=d.getUTCHours(), mi=d.getUTCMinutes();
+  const ap = h>=12 ? "pm" : "am";
+  h = h%12; if(h===0) h=12;
+  return {h, m:mi, ap, dayNum:d.getUTCDate(), dow:d.getUTCDay()};
+}
+
+/* ---- header --------------------------------------------------------------- */
+function renderHeader(tor, splits){
+  const streak = streakWord(tor.streakCode, tor.streakCount);
+  return `   <div class="header">
+      <div class="brand">
+        <div class="crest"><img src="https://assets.nhle.com/logos/nhl/svg/TOR_light.svg" alt="Toronto Maple Leafs"></div>
+        <div class="record">
+          <div class="wl num">${tor.wins}<span class="dash">-</span>${tor.losses}<span class="dash">-</span>${tor.otLosses}</div>
+          <div class="sub">${tor.points} points, ${ordinal(tor.divisionSequence)} in the ${tor.divisionName}, ${streak}</div>
+        </div>
+      </div>
+      <div class="meta">
+        <div class="date">${fmtDate(tor.standingsDate)}</div>
+        <div class="splits">Home ${splits.home} · Road ${splits.road} · Last 10 ${splits.l10}</div>
+        <div class="sched" id="schedLine">Schedule left</div>
+      </div>
+    </div>`;
+}
+function streakWord(code, count){
+  count = count || 0;
+  if(code==="W") return `won ${count} straight`;
+  if(code==="L") return `lost ${count} straight`;
+  if(code==="T"||code==="P") return `${code==="T"?"winless":"win-less"} ${count}`;
+  return "";
+}
+function fmtDate(iso){
+  if(!iso) return new Date().toLocaleDateString("en-CA",{weekday:"long",month:"long",day:"numeric"});
+  return new Date(iso).toLocaleDateString("en-CA",{weekday:"long",month:"long",day:"numeric",timeZone:"America/Toronto"});
+}
+
+/* ---- game by game bars + month axis ------------------------------------- */
+function renderG2G(games){
+  const played = games.filter(isFinished);
+  const total = games.length;
+  const n = games.length;
+  const W = 1000;
+  const topPad = 30, baseY = 215;                 // baseline (0 margin)
+  let maxAbs = 3;
+  games.forEach(g => { const s=torSide(g); if(s.tor!=null&&s.opp!=null) maxAbs=Math.max(maxAbs,Math.abs(s.tor-s.opp)); });
+  const unit = (baseY - topPad) / maxAbs;         // px per goal
+
+   // horizontal grid lines + y labels
+  const labels = [3,2,1,-1,-2,-3];
+  let grid = "";
+   labels.forEach(v => {
+     const y = baseY - v*unit;
+     const dash = v!==0 ? ' stroke-dasharray="3 4"' : "";
+     grid += `<line x1="0" x2="${W}" y1="${y}" y2="${y}" stroke="${v===0?"var(--line)":"#26262b"}" stroke-width="1"${dash}/>`
+           + `<text class="axis-txt" x="${W}" y="${y+4}" text-anchor="end">${v>0?"+":""}${v}</text>`;
+   });
+
+   // Lay games in [pad, W-pad] so the first/last dot (radius 7) can't be clipped
+   // by the chart's overflow:hidden on either edge.
+  const pad = 9, slot = (W-2*pad)/n, barW = slot*0.62;
+  const cx = i => pad + i*slot + slot/2;      // centre x of game i
+  const lx = i => pad + i*slot;              // left edge of game i's column
+  let bars = "";
+   games.forEach((g,i) => {
+     if(!isFinished(g)) return;
+     const s=torSide(g), diff=s.tor-s.opp;
+     if(diff===0) return;
+     const h=Math.abs(diff)*unit, x=cx(i)-(barW/2), col=OUTCOLOR[outcome(g)];
+     bars += diff>0
+       ? `<rect x="${x.toFixed(1)}" y="${(baseY-h).toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" fill="${col}" rx="1"/>`
+       : `<rect x="${x.toFixed(1)}" y="${baseY}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" fill="${col}" rx="1"/>`;
+   });
+
+   // one small home/away marker per game
+  const dotY = baseY + maxAbs*unit + 18;
+  let dots = games.map((g,i) => {
+     const home = TEAM_ID===g.homeTeam.id;
+     const col = isFinished(g) ? "var(--muted)" : "var(--pending)";
+     return `<g transform="translate(${cx(i).toFixed(1)},${dotY})" style="color:${col}">${dotSvg(home)}</g>`;
+   }).join("");
+
+   // One vertical month label at the first game of each calendar month. Rotating
+   // them 90deg means few-games early in the season can't crowd the left edge, and
+   // the gap guard never stacks two labels in one column.
+  const names=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const labelTop = dotY + 18;
+  let months="";
+  let lastMonth=-1, lastMonthX=-999;
+  games.forEach((g,i)=>{
+    const m = new Date(g.startTimeUTC).getMonth();
+    if(m===lastMonth) return;
+    lastMonth=m;
+    const x = cx(i);
+    if(x - lastMonthX < 10) return;
+    lastMonthX = x;
+    months += `<text class="month-txt" x="${x.toFixed(0)}" y="${labelTop.toFixed(0)}" transform="rotate(90 ${x.toFixed(0)} ${labelTop.toFixed(0)})">${names[m]}</text>`;
+  });
+
+  const H = labelTop + 34;
+  // Invisible full-column tap targets (drawn on top) so any bar or its bottom
+  // dot is easy to tap; the tap reveals that game in the "g2g-pick" line above.
+  let hits = "";
+  games.forEach((g,i)=>{
+    hits += `<rect class="hit" data-pick="${escAttr(pickLabel(g))}" x="${lx(i).toFixed(1)}" y="0" width="${slot.toFixed(1)}" height="${H}"/>`;
+  });
+  return `   <div class="sec-title"><h2>The Season, Game By Game</h2>
+        <div class="note">${played.length} of ${total} played · bar height = goal margin · <span class="swatch" style="background:var(--otl);vertical-align:middle;margin:0 3px"></span>amber = OT/SO loss</div></div>
+      <div class="g2g-pick" id="g2gPick">Tap a bar or dot for the game</div>
+      <div class="chart-scroll"><svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMinYMin meet" role="img" aria-label="Goal margin for each game">
+        ${grid}${bars}${dots}${months}${hits}
+      </svg></div>`;
+}
+
+/* ---- playoff line --------------------------------------------------------- */
+function renderPlayoffLine(games, tor, cutoff){
+  const played = games.filter(isFinished);
+  let pts=0; const data=[];
+   played.forEach(g => { pts += outcome(g)==="L" ? 1 : 2; data.push(gapRel(pts, cutoff)); });
+  const W=1000, topPad=26, H=150;
+  const gap = tor.points - cutoff;
+  const dataMin = data.length ? Math.min(...data) : gap;
+  const maxRel = Math.max(10, gap+3), minRel = Math.max(-6, gap-14, dataMin-1);
+  const baseRelY = 150, unit=(H-topPad-12)/(maxRel-minRel);
+  const yFor = rel => Math.max(1, Math.min(H-1, 12 + (maxRel-rel)*unit));
+  const xFor = i => (data.length>1 ? (i/(data.length-1))*W : 0);
+  const relOf = p => p - cutoff;
+  const gl=[10,5,0,-5,-10].filter(r=>r>=minRel&&r<=maxRel);
+  let grid=gl.map(r=>{
+     const dash=r!==0?' stroke-dasharray="3 4"':"";
+     return `<line x1="0" x2="${W}" y1="${yFor(r).toFixed(1)}" y2="${yFor(r).toFixed(1)}" stroke="${r===0?"#caa":"#26262b"}" stroke-width="1"${dash}/>`
+          + `<text class="axis-txt" x="${W}" y="${(yFor(r)+4).toFixed(1)}" text-anchor="end">${r>0?"+":""}${r}</text>`;
+   }).join("");
+  const lineStr = data.map((rel,i)=>`${xFor(i).toFixed(1)},${yFor(rel).toFixed(1)}`).join(" ");
+  const lastRel = relOf(tor.points);
+  const ex=Math.min(W-3, xFor(data.length-1)), ey=yFor(lastRel);
+  const note = gap>0 ? `${gap} points clear of the first team out`
+             : gap<0 ? `${-gap} points behind the first team out`
+             : "On the playoff line";
+  return `   <div class="sec-title"><h2>Playoff Line${gap>0?` <span class="pill">+${gap}</span>`:""}</h2>
+        <div class="note">${note}</div></div>
+      <div class="chart-scroll"><svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMinYMin meet">
+        ${grid}
+        ${lineStr?`<polyline fill="none" stroke="#c9b48a" stroke-width="2.5" points="${lineStr}" stroke-linejoin="round" stroke-linecap="round"/>`:""}
+        <circle cx="${ex.toFixed(1)}" cy="${ey.toFixed(1)}" r="3.4" fill="#fff"/>
+      </svg></div>`;
+}
+function gapRel(p, cutoff){ return p - cutoff; }
+
+/* ---- division grids ------------------------------------------------------- */
+function renderDivisions(games){
+  // TOR's head-to-head with every team, two columns: own division first.
+  const colA = ["Atlantic", "Pacific"].map(name => divisionBlock(name, games)).join("");
+  const colB = ["Metropolitan", "Central"].map(name => divisionBlock(name, games)).join("");
+  return `   <div class="div-wrap">${colA}${colB}</div>`;
+}
+function divisionBlock(divName, games){
+  const teams = (teamsByDiv[divName]||[]).slice().sort((a,b)=>b.points-a.points);
+  if(!teams.length) return "";
+  // Tally the Leafs' record per opponent, and the division total, in one pass.
+  const byOpp={};
+  const div={w:0,l:0,o:0};
+  games.forEach(g=>{
+    if(!isRegular(g)||!isFinished(g)) return;
+    const s=torSide(g);
+    if(TOPS[s.oppTeam.abbrev]!==divName) return;
+    const o=outcome(g);
+    const r=byOpp[s.oppTeam.abbrev]||(byOpp[s.oppTeam.abbrev]={w:0,l:0,o:0});
+    if(o==="W"){r.w++;div.w++;} else if(o==="L"){r.l++;div.l++;} else {r.o++;div.o++;}
+  });
+  const rows = teams.map(t=>{
+    if(t.teamAbbrev===TEAM) return ""; // no head-to-head with yourself
+    const r=byOpp[t.teamAbbrev]||{w:0,l:0,o:0};
+    const has=r.w+r.l+r.o>0;
+    return `<div class="ss-row${has?"":" noplay"}" title="Toronto vs ${L(t.teamCommonName)}">
+        <img class="logo" src="${darkLogo(TEAM)}" alt="TOR">
+        <span class="vs">vs</span>
+        <img class="logo" src="${darkLogo(t.teamAbbrev)}" alt="${t.teamAbbrev}">
+        <span class="nm">${t.teamAbbrev}</span>
+        <span class="rec num">${has?wl([r.w,r.l,r.o]):"—"}</span>
+      </div>`;
+  }).join("");
+  const hasDiv=div.w+div.l+div.o>0;
+  return `<div class="div-block">
+      <div class="div-head"><span class="name">${divName}</span><span class="rec num"${hasDiv?"":` style="opacity:.35"`} title="${hasDiv?"Record vs this division":"No games vs this division yet"}">${hasDiv?wl([div.w,div.l,div.o]):"—"}</span></div>
+      ${rows}
+    </div>`;
+}
+        // abbrev -> division
+
+/* ---- playoff picture ------------------------------------------------------ */
+function renderPlayoffPicture(tor, allTeams){
+  // All 32 teams grouped by conference -> division, then 2 wild cards per conference.
+  const confDivs={};
+  allTeams.forEach(t=>{ const c=t.conferenceName;
+     (confDivs[c]=confDivs[c]||{}); (confDivs[c][t.divisionName]=confDivs[c][t.divisionName]||[]).push(t); });
+  Object.values(confDivs).forEach(cd=>Object.values(cd).forEach(l=>l.sort((a,b)=> (b.points-a.points)||(b.gamesPlayed-a.gamesPlayed))));
+  const DIV_ORDER=["Atlantic","Metropolitan","Central","Pacific"];
+  const confOrder = Object.keys(confDivs).sort((a,b)=> (a===tor.conferenceName?0:1)-(b===tor.conferenceName?0:1));
+  const mk=(rk,t,cls)=> t ? `<div class="pp-row ${cls||""} ${t.teamAbbrev===TEAM?"hi":""}">
+        <span class="rk">${rk}</span><img class="logo" src="${darkLogo(t.teamAbbrev)}" alt="${t.teamAbbrev}">
+        <span class="nm">${t.teamAbbrev}</span><span class="gp num">${t.gamesPlayed||0}</span>
+        <span class="wl num">${t.wins||0}</span><span class="wl num">${t.losses||0}</span><span class="wl num">${t.otLosses||0}</span>
+        <span class="pts num">${t.points||0}</span>
+      </div>` : "";
+  // Each group carries its own header so the side-by-side columns stay aligned.
+  const head = `<div class="pp-head"><span class="rk"></span><span class="logo"></span><span class="nm"></span><span class="gp">GP</span><span class="wl">W</span><span class="wl">L</span><span class="wl">OT</span><span class="pts">PTS</span></div>`;
+  const group = (title, rowsHTML) => `<div class="pp-group"><div class="g-title">${title}</div>${head}${rowsHTML}</div>`;
+  let out = "";
+  confOrder.forEach(cname=>{
+    const cd = confDivs[cname];
+    // Own division first (when in the Leafs' conference), then the fixed league order.
+    const divOrder = Object.keys(cd).sort((a,b)=>{
+      const oa=a===tor.divisionName?0:1, ob=b===tor.divisionName?0:1;
+      if(oa!==ob) return oa-ob; return DIV_ORDER.indexOf(a)-DIV_ORDER.indexOf(b);
+    });
+    // This conference's 2 wild-card slots, by the API's official conference rank.
+    const confTeams = divOrder.flatMap(d=>cd[d]);
+    const qualSet = new Set(Object.values(cd).map(l=>l.slice(0,3)).flat().map(t=>t.teamAbbrev));
+    const wildPool = confTeams.slice().sort((a,b)=> (a.conferenceSequence||99)-(b.conferenceSequence||99)).filter(t=>!qualSet.has(t.teamAbbrev));
+    const wcRows=[];
+    for(let i=0;i<2;i++){ if(wildPool[i]) wcRows.push(mk("WC"+(i+1), wildPool[i], "qualify")); }
+    wildPool.slice(2,4).forEach(t=> wcRows.push(mk("", t)));
+    // One row per conference: its two divisions plus its wild card (3 columns).
+    const body = divOrder.map(d=> group(d.toUpperCase(), cd[d].map((t,i)=>mk(String(i+1), t)).join(""))).join("")
+      + group(cname+" wild card", wcRows.join(""));
+    out += `<div class="pp-conf"><div class="pp-conf-label">${cname} Conference</div><div class="pp-conf-row">${body}</div></div>`;
+  });
+  return out;
+}
+function fmtTOI(sec){
+  if(sec==null||isNaN(sec)) return "—";
+  let m=Math.floor(sec/60), s=Math.round(sec%60);
+  if(s===60){m++;s=0;}
+  return m+":"+String(s).padStart(2,"0");
+}
+function fmtSv(p){
+  if(p==null||isNaN(p)||p<=0) return "—";
+  return "."+String(Math.round(p*1000)).padStart(3,"0");
+}
+function renderLeaders(stats){
+  const sk=stats.skaters||[], gl=stats.goalies||[];
+  const best=(arr,k)=>arr.reduce((a,b)=> (b&&b[k]>a[k]?b:a), arr[0]||{points:0,goals:0,assists:0,penaltyMinutes:0,avgTimeOnIcePerGame:0});
+  const bestMin=(arr,k)=>arr.reduce((a,b)=> (b&&b[k]<a[k]?b:a), arr[0]||{});
+  // positionCode: C / L / R are forwards, D are defensemen; goalies are separate.
+  const fwd = sk.filter(s=>["C","L","R"].includes(s.positionCode));
+  const def = sk.filter(s=> s.positionCode==="D");
+
+  // One compact leader row: stat label, its top player, headline value + a tiny unit.
+  const row=(label, who, value, unit)=>`<div class="stat-row">
+      <img class="mug" src="${who.headshot||""}" alt="">
+      <div class="lbl"><div class="cat">${label}</div><div class="who">${initials(who)||"—"}</div></div>
+      <div class="val num">${value}${unit?`<span class="u">${unit}</span>`:""}</div>
+    </div>`;
+
+  // Forwards and defensemen share the same skater stats.
+  const skaterRows=(pool)=>{
+    const p=best(pool,"points"), g=best(pool,"goals"), a=best(pool,"assists"),
+          oi=best(pool,"avgTimeOnIcePerGame"), pm=best(pool,"penaltyMinutes");
+    return  row("Points", p, p.points||0)
+          + row("Goals",  g, g.goals||0)
+          + row("Assists",a, a.assists||0)
+          + row("Time on Ice", oi, fmtTOI(oi.avgTimeOnIcePerGame), "min / game")
+          + row("PIMs", pm, pm.penaltyMinutes||0);
+  };
+  const forwards = skaterRows(fwd);
+  const defense  = skaterRows(def);
+
+  // Goalies: best save %, most wins, lowest GAA (lowest is better), most shutouts.
+  const sv = best(gl,"savePercentage"), wn = best(gl,"wins"),
+        gaa = bestMin(gl,"goalsAgainstAverage"), so = best(gl,"shutouts");
+  const goalieRows =
+      row("Save Percentage", sv, fmtSv(sv.savePercentage), "SV%")
+    + row("Wins", wn, wn.wins||0, "of "+(wn.gamesStarted||wn.gamesPlayed||0)+" starts")
+    + row("Goals-Against Avg", gaa, gaa.goalsAgainstAverage?gaa.goalsAgainstAverage.toFixed(2):"—", "GAA · lower best")
+    + row("Shutouts", so, so.shutouts||0, "in "+(so.gamesPlayed||0)+" games");
+
+  const group=(title, count, rows)=>`<div class="lg-group">
+      <div class="lg-title">${title}<span class="cnt">${count}</span></div>
+      ${rows}
+    </div>`;
+
+  return `   <div class="sec-title"><h2>Team Leaders</h2>
+        <div class="note">season to date · leader within each group</div></div>
+    <div class="grid-leaders">
+      ${group("Forwards", fwd.length+" on the team", forwards)}
+      ${group("Defense", def.length+" on the team", defense)}
+      ${group("Goalies", gl.length+" tenders", goalieRows)}
+    </div>`;
+}
+
+/* ---- next / last -------------------------------------------------------- */
+function renderNext5(games){
+  const host=document.getElementById("next5"); if(!host) return;
+  const up = games.filter(g=>!isFinished(g)).sort((a,b)=>Date.parse(a.startTimeUTC)-Date.parse(b.startTimeUTC)).slice(0,5);
+  host.innerHTML = up.map(a=>{
+     const s=torSide(a), w=toEastern(a.startTimeUTC, a.easternUTCOffset);
+     const at = s.isHome ? "vs" : "@";
+     const dow = ["SUN","MON","TUE","WED","THU","FRI","SAT"][w.dow];
+     return `<div class="next-row">
+        <div class="when"><div class="dow">${dow}</div><div class="day num">${w.dayNum}</div></div>
+        <div class="at">${at}</div>
+        <div class="op"><img src="${s.oppTeam.logo||darkLogo(s.oppTeam.abbrev)}" alt="${s.oppTeam.abbrev}"></div>
+        <div class="time num">${w.h}:${String(w.m).padStart(2,"0")}${w.ap}</div>
+      </div>`;
+   }).join("");
+}
+function renderLast5(games){
+  const host=document.getElementById("last5"); if(!host) return;
+  const done = games.filter(isFinished).sort((a,b)=>Date.parse(a.startTimeUTC)-Date.parse(b.startTimeUTC)).slice(-5).reverse();
+  host.innerHTML = done.map(a=>{
+     const s=torSide(a), o=outcome(a);
+     const cls = o==="W"?"w":o==="OTL"?"ot":"l";
+     const letter = o==="L"?"L":o==="OTL"?"O":"W";
+     return `<div class="last-row">
+        <img src="${s.oppTeam.logo||darkLogo(s.oppTeam.abbrev)}" alt="${s.oppTeam.abbrev}">
+        <div class="score num">${s.tor}-${s.opp}</div>
+        <div class="badge ${cls}">${letter}</div>
+        <div class="oppab">${s.oppTeam.abbrev}</div>
+      </div>`;
+   }).join("");
+}
+
+/* ---- shell + footer ------------------------------------------------------ */
+function shell(){
+  return `   <div id="header"></div>
+    <div id="g2g"></div>
+    <div id="pl"></div>
+    <div id="ppWrap"></div>
+    <div class="grid3">
+      <div class="col" id="divCol"></div>
+      <div class="col">
+        <div class="col-head">Next 5 <span class="tag">Eastern Time</span></div>
+        <div id="next5"><div class="loading">Loading…</div></div>
+        <div class="col-head" style="margin-top:18px">Last 5</div>
+        <div id="last5"><div class="loading">Loading…</div></div>
+      </div>
+    </div>
+    <div class="leaders-wrap" id="leadersWrap"></div>
+    <div class="legend">
+      <div class="item"><span class="swatch" style="background:var(--win)"></span>Win</div>
+      <div class="item"><span class="swatch" style="background:var(--loss)"></span>Loss</div>
+      <div class="item"><span class="swatch" style="background:var(--otl)"></span>OT/SO loss</div>
+      <div class="item"><span class="swatch" style="background:var(--pending)"></span>Still to play</div>
+      <div class="sep"></div>
+      <div class="item">Filled dot or house = home · ring or plane = away</div>
+    </div>
+    <div class="foot"><div class="updated" id="updated"></div><div class="brandmark">DASHBOARD</div></div>`;
+}
+
+/* ---- league-wide game log + schedule-strength rank (heavy: 6h cache) ---- */
+async function allLeagueGames(season, abbrs){
+  const pct={}; teamsAll.forEach(t=>{ pct[t.teamAbbrev]=t.pointPctg||0; });
+  const cacheKey="allg:"+season;
+  let map = cacheGet(cacheKey, TTL.allschedule);
+  if(!map){
+    map={};
+    const q=abbrs.slice();
+    // Gentle trickle: 3 in flight with a small jitter so a fresh load spreads its
+    // 32 team-schedule calls over a few seconds instead of firing them all at once.
+    const pump = async() => {
+      while(q.length){
+        const ab = q.shift(); if(!ab) break;
+        try{ const j = await fetchJSON(`/v1/club-schedule-season/${ab}/now`, null, null); map[ab] = (j && j.games) || []; }catch(e){}
+        await new Promise(r => setTimeout(r, 180 + Math.random()*220));
+      }
+    };
+    await Promise.all([pump(),pump(),pump()]);
+    cacheSet(cacheKey, map);
+     }
+   // dedupe all season games by gameId
+  const byId={};
+  Object.keys(map).forEach(ab=>{ (map[ab]||[]).forEach(g=>{ if(!g||g.season!==season) return; const id=g.gameId|| (g.homeTeam.id+"-"+g.awayTeam.id+"-"+g.startTimeUTC); if(!byId[id]) byId[id]=g; }); });
+  const allGames=Object.keys(byId).map(id=>byId[id]).sort((a,b)=>Date.parse(a.startTimeUTC)-Date.parse(b.startTimeUTC));
+   // per-team last-5 finished
+  const recent={};
+  teamsAll.forEach(t=>{
+    const fin=allGames
+        .filter(g=>isFinished(g) && (g.homeTeam.abbrev===t.teamAbbrev || g.awayTeam.abbrev===t.teamAbbrev))
+        .sort((a,b)=>Date.parse(a.startTimeUTC)-Date.parse(b.startTimeUTC));
+    recent[t.teamAbbrev]=fin.slice(-5);
+     });
+   // schedule-strength rank: avg opponent PPG over games still to play
+  const ppg={};
+  Object.keys(pct).forEach(ab=>{
+    let sum=0, cnt=0;
+     (map[ab]||[]).forEach(a=>{ if(Date.parse(a.startTimeUTC) < Date.now()) return; const opp=a.homeTeam.abbrev===ab?a.awayTeam.abbrev:a.homeTeam.abbrev; sum+=(pct[opp]||0); cnt++; });
+    ppg[ab]=cnt?sum/cnt:0;
+     });
+  const order=abbrs.slice().sort((x,y)=>ppg[y]-ppg[x]);
+  const rank=(()=>{ const i=order.indexOf(TEAM); return i>=0?i+1:null; })();
+  return { recent, rank };
+}
+
+/* ---- main ---------------------------------------------------------------- */
+let teamsAll=[], teamsByDiv={}, TOPS={}, recentByAbbr={}, chartsAnchored=false;
+
+// Tapping a game's bar or its bottom dot reveals that game in the "g2g-pick" line.
+// Bound on document (which persists across in-place innerHTML refreshes).
+document.addEventListener("click", e=>{
+  const hit = e.target.closest("[data-pick]");
+  if(!hit) return;
+  document.querySelectorAll(".hit").forEach(h=>h.classList.toggle("picked", h===hit));
+  const el = document.getElementById("g2gPick");
+  if(el){ el.textContent = hit.getAttribute("data-pick"); el.classList.add("on"); }
+});
+
+async function main(refresh){
+  const content=document.getElementById("content"), load=document.getElementById("load");
+  usedStale = false; // reset per attempt; set true if any core fetch fell back to cache
+  if(refresh){ document.getElementById("next5").innerHTML=""; document.getElementById("last5").innerHTML=""; }
+  try{
+    const [stats, sched, stnd] = await Promise.all([
+      fetchJSON(`/v1/club-stats/${TEAM}/now`, "clubstats", TTL.clubstats),
+      fetchJSON(`/v1/club-schedule-season/${TEAM}/now`, "schedule", TTL.schedule),
+      fetchJSON(`/v1/standings/now`, "standings", TTL.standings)
+    ]);
+
+    buildMaps(stnd);
+    const season = sched.currentSeason || (stnd.standings[0] && stnd.standings[0].seasonId);
+    const games = (sched.games||[])
+      .filter(g => g.season===season && isRegular(g))
+      .slice().sort((a,b)=>Date.parse(a.startTimeUTC)-Date.parse(b.startTimeUTC));
+    const tor = teamsAll.find(t=>t.teamAbbrev===TEAM);
+    tor.standingsDate = stnd.standingsDateTimeUtc;
+
+    const splits={
+      home: wl([tor.homeWins||0,tor.homeLosses||0,tor.homeOtLosses||0]),
+      road: wl([tor.roadWins||0,tor.roadLosses||0,tor.roadOtLosses||0]),
+      l10:  wl([tor.l10Wins||0,tor.l10Losses||0,tor.l10OtLosses||0])
+    };
+
+    const conf = teamsAll.filter(t=>t.conferenceName===tor.conferenceName);
+    // NHL playoff cut: top 3 of each division + 2 conference wild cards = 8 per
+    // conference. The first team OUT is the best team that makes neither; ranked by
+    // the API's official conferenceSequence (points, then the league's own tiebreakers).
+    const bySeq = conf.slice().sort((a,b)=> (a.conferenceSequence||99)-(b.conferenceSequence||99));
+    const divisionQualifiers = [...new Set(bySeq.map(t=>t.divisionName))].flatMap(d=>
+      bySeq.filter(t=>t.divisionName===d).slice(0,3));
+    const divSet = new Set(divisionQualifiers.map(t=>t.teamAbbrev));
+    const wildCards = bySeq.filter(t=>!divSet.has(t.teamAbbrev)).slice(0,2);
+    const qualified = new Set([...divisionQualifiers, ...wildCards].map(t=>t.teamAbbrev));
+    const firstOut = bySeq.find(t=>!qualified.has(t.teamAbbrev));
+    const cutoff = firstOut ? firstOut.points : tor.points;
+    const confSorted = conf.slice().sort((a,b)=> (b.points-a.points)||(b.gamesPlayed-a.gamesPlayed)||(b.goalsFor||0)-(a.goalsFor||0));
+
+    content.innerHTML = shell();
+    document.getElementById("header").innerHTML = renderHeader(tor, splits);
+    document.getElementById("g2g").innerHTML = renderG2G(games);
+    document.getElementById("pl").innerHTML = renderPlayoffLine(games, tor, cutoff);
+    // Wide charts scroll horizontally on narrow screens; on first paint jump to the
+    // most recent games (right edge). No auto-refresh, so this runs once per load.
+    if(!chartsAnchored){ document.querySelectorAll(".chart-scroll").forEach(el=>{ el.scrollLeft = el.scrollWidth; }); chartsAnchored=true; }
+    // Playoff picture is its own full-width section, placed above the standings grid.
+    document.getElementById("ppWrap").innerHTML =
+       `<div class="sec-title"><h2>Playoff Picture</h2>` +
+       `<div class="note">3 per division + 2 wild cards qualify per conference</div></div>` +
+       renderPlayoffPicture(tor, teamsAll);
+    document.getElementById("divCol").innerHTML = `<div class="col-head">Season Series</div>${renderDivisions(games)}`;
+    document.getElementById("leadersWrap").innerHTML = renderLeaders(stats);
+
+    renderNext5(games);
+    renderLast5(games);
+
+    content.style.display="block";
+    load.style.display="none";
+    stampUpdated();
+    updateStaleBar();
+
+    // Schedule line from core data (games remaining) — always available, no sweep needed.
+    {
+      const remaining = games.filter(g=>!isFinished(g)).length;
+      const el=document.getElementById("schedLine");
+      if(el) el.textContent = "Schedule left: " + remaining + " to go";
+    }
+    // Strength-of-schedule + other teams' recent form: GATED OFF for now to keep the
+    // request count low and avoid 429s. Flip LEAGUE_SWEEP to re-enable it.
+    if(LEAGUE_SWEEP){
+      allLeagueGames(season, teamsAll.map(t=>t.teamAbbrev)).then(league=>{
+        recentByAbbr = league.recent || {};
+        const divEl=document.getElementById("divCol");
+        if(divEl) divEl.innerHTML = `<div class="col-head">Season Series</div>${renderDivisions(games)}`;
+        const el=document.getElementById("schedLine");
+        if(el && league.rank){
+          el.textContent = `Schedule left: ${ordinal(league.rank)}-toughest of 32 · ${remaining} to go`;
+          }
+      }).catch(()=>{ /* leave placeholders if the slow fetch fails */ });
+    }
+
+   }catch(err){
+     console.error(err);
+     load.className="error";
+    load.style.display="block";
+    load.innerHTML = "Could not reach the NHL API.<br>"+escapeHtml((err&&err.message)||"")+"<br><button class='errbtn' onclick='location.reload()'>Retry</button>";
+   }
+}
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function stampUpdated(){
+  const el=document.getElementById("updated");
+  if(el) el.textContent = "Updated "+new Date().toLocaleTimeString([], {hour:"numeric",minute:"2-digit"});
+}
+function lastGoodTime(key){
+  try{ const raw=localStorage.getItem("gb:"+key); if(raw) return new Date(JSON.parse(raw).t).toLocaleTimeString([], {hour:"numeric",minute:"2-digit"}); }catch(e){}
+  return "unknown time";
+}
+function clearStaleCache(){
+  try{ for(let i=localStorage.length-1;i>=0;i--){ const k=localStorage.key(i); if(k && k.indexOf("gb:")===0) localStorage.removeItem(k); } }catch(e){}
+}
+function updateStaleBar(){
+  const bar=document.getElementById("staleBar");
+  if(!bar) return;
+  if(usedStale){
+    const t = lastGoodTime("standings") || lastGoodTime("schedule") || lastGoodTime("clubstats");
+    bar.innerHTML = "\u26A0 Live feed unavailable " + "\u2014 showing last saved data (<b>updated "+t+"</b>)."
+      + " Refresh the page to update, or clear old data and retry."
+      + "<a onclick=\"clearStaleCache();location.reload();\">Retry now</a>";
+    bar.classList.add("on");
+  }else{
+    bar.classList.remove("on");
+  }
+}
+function buildMaps(stnd){
+  teamsAll = stnd.standings.map(s=>({
+     teamAbbrev:L(s.teamAbbrev), teamCommonName:s.teamCommonName,
+     divisionName:s.divisionName, conferenceName:s.conferenceName,
+     wins:s.wins||0, losses:s.losses||0, otLosses:s.otLosses||0, ties:s.ties||0,
+     points:s.points||0, gamesPlayed:s.gamesPlayed||0, pointPctg:s.pointPctg||0,
+     divisionSequence:s.divisionSequence||9, conferenceSequence:s.conferenceSequence||9,
+    goalFor:s.goalFor||0, goalAgainst:s.goalAgainst||0,
+     streakCode:s.streakCode||"", streakCount:s.streakCount||0, regulationWins:s.regulationWins||0,
+     homeWins:s.homeWins||0, homeLosses:s.homeLosses||0, homeOtLosses:s.homeOtLosses||0,
+     roadWins:s.roadWins||0, roadLosses:s.roadLosses||0, roadOtLosses:s.roadOtLosses||0,
+     l10Wins:s.l10Wins||0, l10Losses:s.l10Losses||0, l10OtLosses:s.l10OtLosses||0,
+     teamLogo:s.teamLogo, teamLogoDark:s.teamLogoDark
+   }));
+  teamsByDiv={}; TOPS={};
+   teamsAll.forEach(t=>{
+     (teamsByDiv[t.divisionName]||(teamsByDiv[t.divisionName]=[])).push(t);
+     TOPS[t.teamAbbrev]=t.divisionName;
+   });
+  // order each division by standing
+  Object.values(teamsByDiv).forEach(l=> l.sort((a,b)=> b.points-a.points));
+}
+
+main(false);
+// No auto-refresh: the data moves slowly (a game a day), so the page renders once
+// on load. A visitor can reload manually to get fresh data; the worker keeps a
+// shared edge copy, so that single load is cheap for everyone.
+</script>
+</body>
+</html>
