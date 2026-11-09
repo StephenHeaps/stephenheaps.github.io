@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Opaque origin frames</title>
+<style>
+  body { font-family: -apple-system, sans-serif; margin: 12px; }
+  table { border-collapse: collapse; width: 100%; font-size: 12px; }
+  th, td { border: 1px solid #ccc; padding: 4px; text-align: left; vertical-align: top; word-break: break-all; }
+  .match { background: #d4f7d4; }
+  .differ { background: #f7d4d4; }
+  .case { border: 1px solid #999; margin: 12px 0; padding: 8px; }
+  .case h3 { margin: 0 0 4px; font-size: 14px; }
+  .case p { margin: 0 0 8px; font-size: 12px; color: #555; }
+  iframe { width: 100%; height: 170px; border: 1px dashed #666; }
+</style>
+</head>
+<body>
+
+<h2>Opaque origin frames</h2>
+<p>
+  Each case reports its origin, fingerprinting values, scriptlet, cosmetic
+  filtering and request blocking results. Fingerprint cells are green when they
+  match the main frame (same farbling seed) and red when they differ.
+</p>
+<p>
+  <b>request blocking (all)</b> uses a plain <code>fetch(string)</code>, which
+  every blocking layer sees, including the iOS JS request blocking check.
+  <b>content blocker only (iOS)</b> uses <code>fetch(new URL(...))</code>,
+  which the iOS JS check skips, so only <code>WKContentRuleList</code> rules
+  apply. On desktop both columns should match.
+</p>
+
+<p>Custom filters required:</p>
+<pre>
+##.brave-opaque-generic
+stephenheaps.com##.brave-opaque-specific
+stephenheaps.com##+js(set-constant, braveOpaqueScriptlet, true)
+||stephenheaps.com/opaque-origin/brave-opaque-any.txt^
+||stephenheaps.com/opaque-origin/brave-opaque-3p.txt^$third-party
+</pre>
+
+<table id="results">
+  <thead>
+    <tr>
+      <th>Case</th>
+      <th>origin</th>
+      <th>canvas</th>
+      <th>audio</th>
+      <th>hardwareConcurrency</th>
+      <th>scriptlet</th>
+      <th>cosmetic</th>
+      <th>request blocking (all)</th>
+      <th>content blocker only (iOS)</th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+</table>
+
+<div id="cases"></div>
+
+<script id="probe">
+(function () {
+  const caseName = window.name || 'main';
+
+  function hash(str) {
+    let h = 0;
+    for (let i = 0; i < str.length; i++) {
+      h = (Math.imul(31, h) + str.charCodeAt(i)) | 0;
+    }
+    return (h >>> 0).toString(16);
+  }
+
+  function canvasProbe() {
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = 200;
+      canvas.height = 50;
+      const ctx = canvas.getContext('2d');
+      ctx.textBaseline = 'top';
+      ctx.font = '16px Arial';
+      ctx.fillStyle = '#f60';
+      ctx.fillRect(10, 10, 100, 30);
+      ctx.fillStyle = '#069';
+      ctx.fillText('Brave farbling', 4, 15);
+      return hash(canvas.toDataURL());
+    } catch (e) {
+      return 'error: ' + e.message;
+    }
+  }
+
+  function audioProbe() {
+    try {
+      const AudioCtx = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+      const ctx = new AudioCtx(1, 4410, 44100);
+      const buffer = ctx.createBuffer(1, 4410, 44100);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < data.length; i++) {
+        data[i] = Math.sin(i / 10);
+      }
+      let sum = 0;
+      for (const v of buffer.getChannelData(0)) {
+        sum += Math.abs(v);
+      }
+      return sum.toFixed(6);
+    } catch (e) {
+      return 'error: ' + e.message;
+    }
+  }
+
+  function scriptletProbe() {
+    return window.braveOpaqueScriptlet === true ? 'applied' : 'not applied';
+  }
+
+  function cosmeticProbe() {
+    const classes = ['brave-opaque-generic', 'brave-opaque-specific'];
+    const container = document.createElement('div');
+    for (const cls of classes) {
+      const el = document.createElement('div');
+      el.className = cls;
+      el.textContent = cls;
+      el.style.height = '1px';
+      container.appendChild(el);
+    }
+    document.body.appendChild(container);
+    return new Promise(resolve => {
+      setTimeout(() => {
+        const hidden = Array.from(container.children)
+          .filter(el => getComputedStyle(el).display === 'none' || el.offsetHeight === 0)
+          .map(el => el.className);
+        container.remove();
+        resolve(hidden.length ? 'hidden: ' + hidden.join(', ') : 'none hidden');
+      }, 2000);
+    });
+  }
+
+  // `asURL` passes a URL object, which iOS's JS request blocking wrapper
+  // forwards untouched, so only network-level (content blocker) rules apply.
+  function fetchProbe(url, asURL) {
+    const target = url + '?cb=' + Date.now() + Math.random();
+    const timeout = new Promise(resolve => setTimeout(() => resolve('no response'), 5000));
+    const request = fetch(asURL ? new URL(target) : target, { mode: 'no-cors', cache: 'no-store' })
+      .then(() => 'loaded')
+      .catch(() => 'blocked');
+    return Promise.race([request, timeout]);
+  }
+
+  function requestProbe(asURL) {
+    return Promise.all([
+      fetchProbe('https://stephenheaps.com/opaque-origin/brave-opaque-any.txt', asURL),
+      fetchProbe('https://stephenheaps.com/opaque-origin/brave-opaque-3p.txt', asURL),
+    ]).then(([any, thirdParty]) => 'any: ' + any + ', 3p: ' + thirdParty);
+  }
+
+  function report(result) {
+    if (window.parent !== window) {
+      window.parent.postMessage({ type: 'probe-result', result }, '*');
+    } else {
+      window.dispatchEvent(new CustomEvent('probe-result', { detail: result }));
+    }
+  }
+
+  async function run() {
+    const [cosmetic, request, network] = await Promise.all([
+      cosmeticProbe(),
+      requestProbe(false),
+      requestProbe(true),
+    ]);
+    report({
+      caseName,
+      origin: window.origin,
+      canvas: canvasProbe(),
+      audio: audioProbe(),
+      hardwareConcurrency: String(navigator.hardwareConcurrency),
+      scriptlet: scriptletProbe(),
+      cosmetic,
+      request,
+      network,
+    });
+  }
+
+  if (document.body) {
+    run();
+  } else {
+    document.addEventListener('DOMContentLoaded', run);
+  }
+})();
+</script>
+
+<script>
+  const probeSource = document.getElementById('probe').textContent;
+  const frameDocument = name =>
+    '<!DOCTYPE html><html><head><meta charset="utf-8"></head>' +
+    '<body style="font-family:-apple-system,sans-serif">' +
+    '<div style="font-size:12px">' + name + '</div>' +
+    '<script>' + probeSource + '<\/script></body></html>';
+
+  const cases = [
+    {
+      name: 'sandbox',
+      description: 'sandbox="allow-scripts" srcdoc. Opaque origin.',
+      sandbox: 'allow-scripts',
+      srcdoc: true,
+    },
+    {
+      name: 'data-url',
+      description: 'data: URL iframe. Opaque origin, not sandboxed.',
+      dataURL: true,
+    },
+    {
+      name: 'sandbox-same-origin',
+      description: 'sandbox="allow-scripts allow-same-origin" srcdoc. Control: inherits the parent origin.',
+      sandbox: 'allow-scripts allow-same-origin',
+      srcdoc: true,
+    },
+    {
+      name: 'srcdoc',
+      description: 'Plain srcdoc iframe. Control: local frame inheriting the parent origin.',
+      srcdoc: true,
+    },
+  ];
+
+  const tbody = document.querySelector('#results tbody');
+  const fields = ['origin', 'canvas', 'audio', 'hardwareConcurrency', 'scriptlet', 'cosmetic', 'request', 'network'];
+  const fingerprintFields = ['canvas', 'audio', 'hardwareConcurrency'];
+  const rows = {};
+  let mainResult = null;
+
+  function rowFor(name) {
+    if (!rows[name]) {
+      const tr = document.createElement('tr');
+      const nameCell = document.createElement('td');
+      nameCell.textContent = name;
+      tr.appendChild(nameCell);
+      for (const field of fields) {
+        const td = document.createElement('td');
+        td.dataset.field = field;
+        td.textContent = '…';
+        tr.appendChild(td);
+      }
+      tbody.appendChild(tr);
+      rows[name] = { tr, result: null };
+    }
+    return rows[name];
+  }
+
+  function render(name) {
+    const row = rows[name];
+    if (!row.result) {
+      return;
+    }
+    for (const field of fields) {
+      const td = row.tr.querySelector('[data-field="' + field + '"]');
+      td.textContent = row.result[field];
+      td.className = '';
+      if (mainResult && name !== 'main' && fingerprintFields.includes(field)) {
+        td.className = row.result[field] === mainResult[field] ? 'match' : 'differ';
+      }
+    }
+  }
+
+  function handleResult(result) {
+    const row = rowFor(result.caseName);
+    row.result = result;
+    if (result.caseName === 'main') {
+      mainResult = result;
+      Object.keys(rows).forEach(render);
+    } else {
+      render(result.caseName);
+    }
+  }
+
+  rowFor('main');
+  window.addEventListener('probe-result', e => handleResult(e.detail));
+  window.addEventListener('message', e => {
+    if (e.data && e.data.type === 'probe-result') {
+      handleResult(e.data.result);
+    }
+  });
+
+  const container = document.getElementById('cases');
+  for (const c of cases) {
+    rowFor(c.name);
+    const section = document.createElement('div');
+    section.className = 'case';
+    const title = document.createElement('h3');
+    title.textContent = c.name;
+    const desc = document.createElement('p');
+    desc.textContent = c.description;
+    section.appendChild(title);
+    section.appendChild(desc);
+
+    const iframe = document.createElement('iframe');
+    iframe.name = c.name;
+    if (c.sandbox !== undefined) {
+      iframe.setAttribute('sandbox', c.sandbox);
+    }
+    if (c.dataURL) {
+      iframe.src = 'data:text/html;charset=utf-8,' + encodeURIComponent(frameDocument(c.name));
+    } else {
+      iframe.srcdoc = frameDocument(c.name);
+    }
+    section.appendChild(iframe);
+    container.appendChild(section);
+  }
+</script>
+
+</body>
+</html>
