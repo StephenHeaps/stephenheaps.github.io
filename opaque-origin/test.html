@@ -10,19 +10,28 @@
   th, td { border: 1px solid #ccc; padding: 4px; text-align: left; vertical-align: top; word-break: break-all; }
   .match { background: #d4f7d4; }
   .differ { background: #f7d4d4; }
+  .warning { background: #fff3cd; padding: 8px; }
   .case { border: 1px solid #999; margin: 12px 0; padding: 8px; }
   .case h3 { margin: 0 0 4px; font-size: 14px; }
   .case p { margin: 0 0 8px; font-size: 12px; color: #555; }
-  iframe { width: 100%; height: 170px; border: 1px dashed #666; }
+  iframe { width: 100%; height: 120px; border: 1px dashed #666; }
+  #initiator-frame { height: 900px; }
 </style>
 </head>
 <body>
 
 <h2>Opaque origin frames</h2>
 <p>
-  Each case reports its origin, fingerprinting values, scriptlet, cosmetic
-  filtering and request blocking results. Fingerprint cells are green when they
-  match the main frame (same farbling seed) and red when they differ.
+  Each row reports a frame's origin, fingerprinting values, scriptlets, cosmetic
+  filtering and request blocking. Rows prefixed <code>initiator/</code> are
+  frames created by a cross-origin iframe from the initiator domain, so their
+  initiator origin differs from the main frame. Fingerprint cells are green when
+  they match the main frame and red when they differ.
+</p>
+<p>
+  <b>scriptlet</b> / <b>cosmetic</b> list which rules applied:
+  <code>generic</code>, <code>main</code> (main domain rules) or
+  <code>initiator</code> (initiator domain rules).
 </p>
 <p>
   <b>request blocking (all)</b> uses a plain <code>fetch(string)</code>, which
@@ -32,14 +41,14 @@
   apply. On desktop both columns should match.
 </p>
 
+<p id="initiator-warning" class="warning" hidden>
+  No initiator domain configured. Load this page with
+  <code>?initiator=https://other-domain.example</code>; it must be a different
+  site (eTLD+1) than this page.
+</p>
+
 <p>Custom filters required:</p>
-<pre>
-##.brave-opaque-generic
-stephenheaps.com##.brave-opaque-specific
-stephenheaps.com##+js(set-constant, braveOpaqueScriptlet, true)
-||stephenheaps.com/opaque-origin/brave-opaque-any.txt^
-||stephenheaps.com/opaque-origin/brave-opaque-3p.txt^$third-party
-</pre>
+<pre id="filters"></pre>
 
 <table id="results">
   <thead>
@@ -58,169 +67,112 @@ stephenheaps.com##+js(set-constant, braveOpaqueScriptlet, true)
   <tbody></tbody>
 </table>
 
+<h3>Expected (Shields uses the initiator origin for opaque frames)</h3>
+<table id="expected">
+  <thead>
+    <tr>
+      <th>Case</th>
+      <th>origin</th>
+      <th>farbling</th>
+      <th>scriptlet</th>
+      <th>cosmetic</th>
+      <th>request blocking (all)</th>
+      <th>content blocker only (iOS)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>main</td>
+      <td>main origin</td>
+      <td>baseline</td>
+      <td>main</td>
+      <td>generic, main</td>
+      <td>any: blocked, 3p-main: loaded, 3p-initiator: blocked</td>
+      <td>same as request blocking</td>
+    </tr>
+    <tr>
+      <td>sandbox, data-url</td>
+      <td>null</td>
+      <td>green (same as main)</td>
+      <td>main</td>
+      <td>generic, main</td>
+      <td>any: blocked, 3p-main: loaded, 3p-initiator: blocked</td>
+      <td>same as request blocking</td>
+    </tr>
+    <tr>
+      <td>sandbox-same-origin, srcdoc</td>
+      <td>main origin</td>
+      <td>green (same as main)</td>
+      <td>main</td>
+      <td>generic, main</td>
+      <td>any: blocked, 3p-main: loaded, 3p-initiator: blocked</td>
+      <td>same as request blocking</td>
+    </tr>
+    <tr>
+      <td>initiator</td>
+      <td>initiator origin</td>
+      <td>green (same as main)</td>
+      <td>initiator</td>
+      <td>generic, initiator</td>
+      <td>any: blocked, 3p-main: blocked, 3p-initiator: loaded</td>
+      <td>same as request blocking</td>
+    </tr>
+    <tr>
+      <td>initiator/sandbox, initiator/data-url</td>
+      <td>null</td>
+      <td>green (same as main)</td>
+      <td>initiator</td>
+      <td>generic, initiator</td>
+      <td>any: blocked, 3p-main: blocked, 3p-initiator: loaded</td>
+      <td>same as request blocking</td>
+    </tr>
+    <tr>
+      <td>initiator/sandbox-same-origin, initiator/srcdoc</td>
+      <td>initiator origin</td>
+      <td>green (same as main)</td>
+      <td>initiator</td>
+      <td>generic, initiator</td>
+      <td>any: blocked, 3p-main: blocked, 3p-initiator: loaded</td>
+      <td>same as request blocking</td>
+    </tr>
+  </tbody>
+</table>
+
 <div id="cases"></div>
 
-<script id="probe">
-(function () {
-  const caseName = window.name || 'main';
-
-  function hash(str) {
-    let h = 0;
-    for (let i = 0; i < str.length; i++) {
-      h = (Math.imul(31, h) + str.charCodeAt(i)) | 0;
-    }
-    return (h >>> 0).toString(16);
-  }
-
-  function canvasProbe() {
-    try {
-      const canvas = document.createElement('canvas');
-      canvas.width = 200;
-      canvas.height = 50;
-      const ctx = canvas.getContext('2d');
-      ctx.textBaseline = 'top';
-      ctx.font = '16px Arial';
-      ctx.fillStyle = '#f60';
-      ctx.fillRect(10, 10, 100, 30);
-      ctx.fillStyle = '#069';
-      ctx.fillText('Brave farbling', 4, 15);
-      return hash(canvas.toDataURL());
-    } catch (e) {
-      return 'error: ' + e.message;
-    }
-  }
-
-  function audioProbe() {
-    try {
-      const AudioCtx = window.OfflineAudioContext || window.webkitOfflineAudioContext;
-      const ctx = new AudioCtx(1, 4410, 44100);
-      const buffer = ctx.createBuffer(1, 4410, 44100);
-      const data = buffer.getChannelData(0);
-      for (let i = 0; i < data.length; i++) {
-        data[i] = Math.sin(i / 10);
-      }
-      let sum = 0;
-      for (const v of buffer.getChannelData(0)) {
-        sum += Math.abs(v);
-      }
-      return sum.toFixed(6);
-    } catch (e) {
-      return 'error: ' + e.message;
-    }
-  }
-
-  function scriptletProbe() {
-    return window.braveOpaqueScriptlet === true ? 'applied' : 'not applied';
-  }
-
-  function cosmeticProbe() {
-    const classes = ['brave-opaque-generic', 'brave-opaque-specific'];
-    const container = document.createElement('div');
-    for (const cls of classes) {
-      const el = document.createElement('div');
-      el.className = cls;
-      el.textContent = cls;
-      el.style.height = '1px';
-      container.appendChild(el);
-    }
-    document.body.appendChild(container);
-    return new Promise(resolve => {
-      setTimeout(() => {
-        const hidden = Array.from(container.children)
-          .filter(el => getComputedStyle(el).display === 'none' || el.offsetHeight === 0)
-          .map(el => el.className);
-        container.remove();
-        resolve(hidden.length ? 'hidden: ' + hidden.join(', ') : 'none hidden');
-      }, 2000);
-    });
-  }
-
-  // `asURL` passes a URL object, which iOS's JS request blocking wrapper
-  // forwards untouched, so only network-level (content blocker) rules apply.
-  function fetchProbe(url, asURL) {
-    const target = url + '?cb=' + Date.now() + Math.random();
-    const timeout = new Promise(resolve => setTimeout(() => resolve('no response'), 5000));
-    const request = fetch(asURL ? new URL(target) : target, { mode: 'no-cors', cache: 'no-store' })
-      .then(() => 'loaded')
-      .catch(() => 'blocked');
-    return Promise.race([request, timeout]);
-  }
-
-  function requestProbe(asURL) {
-    return Promise.all([
-      fetchProbe('https://stephenheaps.com/opaque-origin/brave-opaque-any.txt', asURL),
-      fetchProbe('https://stephenheaps.com/opaque-origin/brave-opaque-3p.txt', asURL),
-    ]).then(([any, thirdParty]) => 'any: ' + any + ', 3p: ' + thirdParty);
-  }
-
-  function report(result) {
-    if (window.parent !== window) {
-      window.parent.postMessage({ type: 'probe-result', result }, '*');
-    } else {
-      window.dispatchEvent(new CustomEvent('probe-result', { detail: result }));
-    }
-  }
-
-  async function run() {
-    const [cosmetic, request, network] = await Promise.all([
-      cosmeticProbe(),
-      requestProbe(false),
-      requestProbe(true),
-    ]);
-    report({
-      caseName,
-      origin: window.origin,
-      canvas: canvasProbe(),
-      audio: audioProbe(),
-      hardwareConcurrency: String(navigator.hardwareConcurrency),
-      scriptlet: scriptletProbe(),
-      cosmetic,
-      request,
-      network,
-    });
-  }
-
-  if (document.body) {
-    run();
-  } else {
-    document.addEventListener('DOMContentLoaded', run);
-  }
-})();
-</script>
+<div class="case">
+  <h3>initiator</h3>
+  <p>Cross-origin iframe from the initiator domain, which creates its own test frames.</p>
+  <div id="initiator-container"></div>
+</div>
 
 <script>
-  const probeSource = document.getElementById('probe').textContent;
-  const frameDocument = name =>
-    '<!DOCTYPE html><html><head><meta charset="utf-8"></head>' +
-    '<body style="font-family:-apple-system,sans-serif">' +
-    '<div style="font-size:12px">' + name + '</div>' +
-    '<script>' + probeSource + '<\/script></body></html>';
+  const DEFAULT_INITIATOR_ORIGIN = '';
+  const initiatorParam = new URLSearchParams(location.search).get('initiator');
+  const initiatorOrigin = initiatorParam ? new URL(initiatorParam).origin : DEFAULT_INITIATOR_ORIGIN;
+  self.PROBE_CONFIG = {
+    mainOrigin: location.origin,
+    initiatorOrigin,
+    caseName: 'main',
+  };
 
-  const cases = [
-    {
-      name: 'sandbox',
-      description: 'sandbox="allow-scripts" srcdoc. Opaque origin.',
-      sandbox: 'allow-scripts',
-      srcdoc: true,
-    },
-    {
-      name: 'data-url',
-      description: 'data: URL iframe. Opaque origin, not sandboxed.',
-      dataURL: true,
-    },
-    {
-      name: 'sandbox-same-origin',
-      description: 'sandbox="allow-scripts allow-same-origin" srcdoc. Control: inherits the parent origin.',
-      sandbox: 'allow-scripts allow-same-origin',
-      srcdoc: true,
-    },
-    {
-      name: 'srcdoc',
-      description: 'Plain srcdoc iframe. Control: local frame inheriting the parent origin.',
-      srcdoc: true,
-    },
-  ];
-
+  const mainHost = location.hostname;
+  const initiatorHost = initiatorOrigin ? new URL(initiatorOrigin).hostname : 'INITIATOR_HOST';
+  document.getElementById('filters').textContent = [
+    '##.brave-opaque-generic',
+    mainHost + '##.brave-opaque-main',
+    initiatorHost + '##.brave-opaque-initiator',
+    mainHost + '##+js(set-constant, braveOpaqueScriptletMain, true)',
+    initiatorHost + '##+js(set-constant, braveOpaqueScriptletInitiator, true)',
+    '||' + mainHost + '/opaque-origin/brave-opaque-any.txt^',
+    '||' + mainHost + '/opaque-origin/brave-opaque-3p.txt^$third-party',
+    '||' + initiatorHost + '/opaque-origin/brave-opaque-initiator-3p.txt^$third-party',
+  ].join('\n');
+  document.getElementById('initiator-warning').hidden = Boolean(initiatorOrigin);
+</script>
+<script src="probe.js"></script>
+<script src="harness.js"></script>
+<script>
   const tbody = document.querySelector('#results tbody');
   const fields = ['origin', 'canvas', 'audio', 'hardwareConcurrency', 'scriptlet', 'cosmetic', 'request', 'network'];
   const fingerprintFields = ['canvas', 'audio', 'hardwareConcurrency'];
@@ -272,6 +224,16 @@ stephenheaps.com##+js(set-constant, braveOpaqueScriptlet, true)
   }
 
   rowFor('main');
+  for (const c of ProbeHarness.CASES) {
+    rowFor(c.name);
+  }
+  if (initiatorOrigin) {
+    rowFor('initiator');
+    for (const c of ProbeHarness.CASES) {
+      rowFor('initiator/' + c.name);
+    }
+  }
+
   window.addEventListener('probe-result', e => handleResult(e.detail));
   window.addEventListener('message', e => {
     if (e.data && e.data.type === 'probe-result') {
@@ -279,30 +241,14 @@ stephenheaps.com##+js(set-constant, braveOpaqueScriptlet, true)
     }
   });
 
-  const container = document.getElementById('cases');
-  for (const c of cases) {
-    rowFor(c.name);
-    const section = document.createElement('div');
-    section.className = 'case';
-    const title = document.createElement('h3');
-    title.textContent = c.name;
-    const desc = document.createElement('p');
-    desc.textContent = c.description;
-    section.appendChild(title);
-    section.appendChild(desc);
+  ProbeHarness.buildFrames(document.getElementById('cases'), self.PROBE_CONFIG, '');
 
+  if (initiatorOrigin) {
     const iframe = document.createElement('iframe');
-    iframe.name = c.name;
-    if (c.sandbox !== undefined) {
-      iframe.setAttribute('sandbox', c.sandbox);
-    }
-    if (c.dataURL) {
-      iframe.src = 'data:text/html;charset=utf-8,' + encodeURIComponent(frameDocument(c.name));
-    } else {
-      iframe.srcdoc = frameDocument(c.name);
-    }
-    section.appendChild(iframe);
-    container.appendChild(section);
+    iframe.id = 'initiator-frame';
+    iframe.name = 'initiator';
+    iframe.src = initiatorOrigin + '/opaque-origin/initiator.html?main=' + encodeURIComponent(location.origin);
+    document.getElementById('initiator-container').appendChild(iframe);
   }
 </script>
 
