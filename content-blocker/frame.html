@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Content blocker frame</title>
+</head>
+<body style="font-family:-apple-system,sans-serif;font-size:12px">
+<div>Frame origin: <code id="origin"></code></div>
+<script src="content-blocker.js"></script>
+<script>
+  document.getElementById('origin').textContent = location.origin;
+  ContentBlockerTest.runChecks().then(report => {
+    if (window.parent !== window) {
+      window.parent.postMessage({ type: 'content-blocker-result', report }, '*');
+    }
+  });
+</script>
+</body>
+</html>

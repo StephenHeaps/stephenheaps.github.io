@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Content blocker $third-party in cross-site frames</title>
+<style>
+  body { font-family: -apple-system, sans-serif; margin: 12px; }
+  table { border-collapse: collapse; width: 100%; font-size: 12px; margin-bottom: 16px; }
+  th, td { border: 1px solid #ccc; padding: 4px; text-align: left; vertical-align: top; word-break: break-all; }
+  .pass { background: #d4f7d4; }
+  .fail { background: #f7d4d4; }
+  iframe { width: 100%; height: 40px; border: 1px dashed #666; }
+</style>
+</head>
+<body>
+
+<h2>Content blocker <code>$third-party</code> in cross-site frames</h2>
+<p>
+  The top frame and a cross-site iframe each load the same scripts from both
+  domains with <code>&lt;script&gt;</code> tags, so only content blocker rules
+  apply. <code>cb-any.js</code> is blocked everywhere and confirms the rules
+  are active. <code>cb-3p.js</code> is blocked only when <code>$third-party</code>
+  matches.
+</p>
+<p>
+  A <code>$third-party</code> request should be judged against the frame that
+  made it: a frame loading <code>cb-3p.js</code> from its own domain is first
+  party and should load. If the iframe's results match the
+  <b>main document</b> expectation instead, the content blocker is judging
+  every request against the top-level site.
+</p>
+
+<p>Custom filters required:</p>
+<pre id="filters"></pre>
+
+<h3>Results</h3>
+<table id="results">
+  <thead><tr id="results-head"><th>Frame</th></tr></thead>
+  <tbody></tbody>
+</table>
+
+<h3>Expected</h3>
+<table id="expected">
+  <thead><tr id="expected-head"><th>Frame</th><th>Judged against</th></tr></thead>
+  <tbody></tbody>
+</table>
+
+<iframe id="frame"></iframe>
+
+<script src="content-blocker.js"></script>
+<script>
+  const topOrigin = location.origin;
+  const frameOrigin = ContentBlockerTest.otherOrigin();
+  const targets = ContentBlockerTest.targets();
+  document.getElementById('filters').textContent = ContentBlockerTest.filters().join('\n');
+
+  function expectedResult(target, requesterOrigin) {
+    if (target.file === 'cb-any.js') {
+      return 'blocked';
+    }
+    return target.origin === requesterOrigin ? 'loaded' : 'blocked';
+  }
+
+  const resultsHead = document.getElementById('results-head');
+  const expectedHead = document.getElementById('expected-head');
+  for (const target of targets) {
+    for (const head of [resultsHead, expectedHead]) {
+      const th = document.createElement('th');
+      th.textContent = new URL(target.origin).host + '/' + target.file;
+      head.appendChild(th);
+    }
+  }
+  const verdictHead = document.createElement('th');
+  verdictHead.textContent = 'matches';
+  resultsHead.appendChild(verdictHead);
+
+  function addRow(tbody, cells, classes = []) {
+    const tr = document.createElement('tr');
+    cells.forEach((text, i) => {
+      const td = document.createElement('td');
+      td.textContent = text;
+      if (classes[i]) {
+        td.className = classes[i];
+      }
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  }
+
+  const expectedBody = document.querySelector('#expected tbody');
+  addRow(expectedBody, ['top (' + topOrigin + ')', 'own frame / main document',
+    ...targets.map(t => expectedResult(t, topOrigin))]);
+  addRow(expectedBody, ['iframe (' + frameOrigin + ')', 'own frame (correct)',
+    ...targets.map(t => expectedResult(t, frameOrigin))]);
+  addRow(expectedBody, ['iframe (' + frameOrigin + ')', 'main document',
+    ...targets.map(t => expectedResult(t, topOrigin))]);
+
+  const resultsBody = document.querySelector('#results tbody');
+  function renderReport(label, report) {
+    const values = targets.map(target => {
+      const match = report.results.find(r => r.origin === target.origin && r.file === target.file);
+      return match ? match.result : 'n/a';
+    });
+    const ownFrame = targets.map(t => expectedResult(t, report.frameOrigin));
+    const mainDocument = targets.map(t => expectedResult(t, topOrigin));
+    const equals = expected => expected.every((value, i) => value === values[i]);
+    let verdict = 'neither';
+    if (equals(ownFrame) && equals(mainDocument)) {
+      verdict = 'own frame / main document';
+    } else if (equals(ownFrame)) {
+      verdict = 'own frame (correct)';
+    } else if (equals(mainDocument)) {
+      verdict = 'main document';
+    }
+    const classes = [null, ...values.map((value, i) => value === ownFrame[i] ? 'pass' : 'fail'),
+      verdict === 'neither' || verdict === 'main document' ? 'fail' : 'pass'];
+    addRow(resultsBody, [label + ' (' + report.frameOrigin + ')', ...values, verdict], classes);
+  }
+
+  ContentBlockerTest.runChecks().then(report => renderReport('top', report));
+
+  window.addEventListener('message', e => {
+    if (e.origin === frameOrigin && e.data && e.data.type === 'content-blocker-result') {
+      renderReport('iframe', e.data.report);
+    }
+  });
+  document.getElementById('frame').src = frameOrigin + '/content-blocker/frame.html?other=' +
+    encodeURIComponent(topOrigin);
+</script>
+
+</body>
+</html>
