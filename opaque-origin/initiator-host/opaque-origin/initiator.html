@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Opaque origin initiator</title>
+<style>
+  body { font-family: -apple-system, sans-serif; margin: 8px; font-size: 12px; }
+  .case { border: 1px solid #999; margin: 8px 0; padding: 8px; }
+  .case h3 { margin: 0 0 4px; font-size: 13px; }
+  .case p { margin: 0 0 8px; color: #555; }
+  iframe { width: 100%; height: 120px; border: 1px dashed #666; }
+</style>
+</head>
+<body>
+
+<div>Initiator: <code id="origin"></code></div>
+<div id="cases"></div>
+
+<script>
+  const mainParam = new URLSearchParams(location.search).get('main');
+  self.PROBE_CONFIG = {
+    mainOrigin: mainParam ? new URL(mainParam).origin : 'https://stephenheaps.com',
+    initiatorOrigin: location.origin,
+    caseName: 'initiator',
+  };
+  document.getElementById('origin').textContent = location.origin;
+</script>
+<script src="probe.js"></script>
+<script src="harness.js"></script>
+<script>
+  // Forward results from this page's test frames up to the main test page.
+  window.addEventListener('message', e => {
+    if (e.source !== window && e.data && e.data.type === 'probe-result' &&
+        window.parent !== window) {
+      window.parent.postMessage(e.data, '*');
+    }
+  });
+  ProbeHarness.buildFrames(document.getElementById('cases'), self.PROBE_CONFIG, 'initiator/');
+</script>
+
+</body>
+</html>
