@@ -1,12 +1,11 @@
 // Shared by test.html (top frame) and frame.html (cross-site iframe).
-// Uses <script> loads so only network-level (content blocker) rules apply;
-// iOS's JS request blocking only wraps fetch/XHR.
+// Uses <script> loads so only content blocker rules apply; iOS's JS request
+// blocking only wraps fetch/XHR.
 (function () {
   const ORIGINS = [
     'https://stephenheaps.com',
     'https://stephenheaps-testing.stephenheaps.workers.dev',
   ];
-  const FILES = ['cb-any.js', 'cb-3p.js'];
 
   function otherOrigin() {
     const param = new URLSearchParams(location.search).get('other');
@@ -14,6 +13,10 @@
       return new URL(param).origin;
     }
     return ORIGINS.find(origin => origin !== location.origin);
+  }
+
+  function scriptURL(origin) {
+    return origin + '/content-blocker/script.js';
   }
 
   function loadScript(url) {
@@ -33,32 +36,15 @@
     });
   }
 
-  function targets() {
-    const origins = [...new Set([...ORIGINS, location.origin, otherOrigin()])];
-    const list = [];
-    for (const origin of origins) {
-      for (const file of FILES) {
-        list.push({ origin, file, url: origin + '/content-blocker/' + file });
-      }
-    }
-    return list;
-  }
-
+  // Loads script.js from this frame's own domain (first party) and from the
+  // other domain (third party).
   async function runChecks() {
-    const list = targets();
-    const results = await Promise.all(list.map(target => loadScript(target.url)));
-    return {
-      frameOrigin: location.origin,
-      results: list.map((target, i) => ({ ...target, result: results[i] })),
-    };
+    const [firstParty, thirdParty] = await Promise.all([
+      loadScript(scriptURL(location.origin)),
+      loadScript(scriptURL(otherOrigin())),
+    ]);
+    return { frameOrigin: location.origin, firstParty, thirdParty };
   }
 
-  function filters() {
-    return targets().map(({ origin, file }) => {
-      const rule = '||' + new URL(origin).host + '/content-blocker/' + file + '^';
-      return file === 'cb-3p.js' ? rule + '$third-party' : rule;
-    });
-  }
-
-  self.ContentBlockerTest = { otherOrigin, runChecks, targets, filters };
+  self.ContentBlockerTest = { ORIGINS, otherOrigin, runChecks };
 })();

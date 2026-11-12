@@ -1,1 +1,0 @@
-// Content blocker test script.
